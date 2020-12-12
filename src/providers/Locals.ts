@@ -48,6 +48,8 @@ class Locals {
         const redisDB = process.env.REDIS_QUEUE_DB || 3;
         const redisPassword = process.env.REDIS_QUEUE_PASSWORD || null;
         const userEmails = process.env.USER_EMAIL || null;
+        const portalUrl = process.env.PORTAL_URL || null;
+        const invitedUserCredits = process.env.CREDITS_FOR_REGISTER || null;
         return {
             appSecret,
             apiPrefix,
@@ -71,7 +73,9 @@ class Locals {
             url,
             queueMonitor,
             queueMonitorHttpPort,
-            userEmails
+            userEmails,
+            portalUrl,
+            invitedUserCredits
         };
     }
 

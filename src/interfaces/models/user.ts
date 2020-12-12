@@ -3,7 +3,10 @@
  *
  */
 
-import { UserRoleEnum } from '../../../src/models/User';
+import { UniversityRoles } from "../../domain/UniversityModel";
+import { ServiceRoleEnum, UserRoleEnum } from "../../../src/models/User";
+import {OtherUserRoles, UserType} from "../../domain/User";
+
 
 export interface Tokens {
     kind: string;
@@ -22,7 +25,7 @@ export interface IUser {
     email: string;
     password: string;
     isVerified: boolean;
-    userType: number;
+    userType: UserType;
     verifyUserToken: string;
     verifyUserExpires: Date;
 
@@ -42,14 +45,17 @@ export interface IUser {
     website?: string;
     picture?: string;
 
-    organisationName?: string;
+    organizationName?: string;
     organisationAddress?: string;
     noStudentsWithDisability?: string;
-    role: UserRoleEnum;
+    role: UserRoleEnum | UniversityRoles | OtherUserRoles;
     accessRequestSent?: boolean;
     statusLog?: Status[];
+    organizationCode: string;
     deductCredits(amount: number, reason: string): void;
-//    generateResetExpiryDate(): Date;
+    rollNumber?: string;
+    serviceRole: ServiceRoleEnum;
+    //    generateResetExpiryDate(): Date;
     // generateResetToken(_passwordResetExpires: Date): string;
 }
 

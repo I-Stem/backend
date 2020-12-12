@@ -7,13 +7,14 @@ import Locals from '../providers/Locals';
 import loggerFactory from '../middlewares/WinstonLogger';
 import request from 'request-promise-native';
 import * as https from 'https';
-import { AfCResponseQueue } from '.';
-import AfcModel, { AFCRequestStatus } from '../domain/AfcModel';
+import  AfCResponseQueue  from './afcResponse';
+import AfcModel, { AFCRequestStatus, DocType } from '../domain/AfcModel';
 import FileModel from '../domain/FileModel';
 import ExceptionMessageTemplates from '../MessageTemplates/ExceptionTemplates';
 import emailService from '../services/EmailService';
 import { getFormattedJson } from '../utils/formatter';
-
+import * as pdfJS  from 'pdfjs-dist/es5/build/pdf';
+import AFCDbModel from '../models/AFC';
 class AfcRequestQueue {
     public queue: any;
     static servicename = 'AFCRequestQueue';
@@ -58,6 +59,22 @@ class AfcRequestQueue {
         this.queue.add(_data, options);
     }
 
+    private isOCRRequiredForDocType(docType: DocType, file: FileModel): boolean
+    {
+        switch (docType) {
+            case DocType.MATH:
+                if (file.mathOcrFileUrl)
+                    return false;
+                break;
+            case DocType.NONMATH:
+                if (file.ocrFileURL)
+                    return false;
+                break;
+            default: return true;
+        }
+        return true;
+    }
+
     private process(): void {
         const logger = loggerFactory(AfcRequestQueue.servicename, 'process');
         this.queue.process(async (_job: any, _done: any) => {
@@ -65,12 +82,13 @@ class AfcRequestQueue {
     try {
         const afcRequest = new AfcModel(_job.data);
         const file = await FileModel.getFileById(afcRequest.inputFileId);
+        await AfcModel.updateAfcPageCount(afcRequest.afcRequestId, file?.inputURL || "");
         if(!file) {
             logger.info("couldn't file by id");
             throw Error("no file with such id")
         }
-        if (!file?.json || file?.OCRVersion !== process.env.OCR_VERSION) { // OCR is not completed or version change
-                  logger.info('OCR is pending');
+        if (this.isOCRRequiredForDocType(afcRequest.docType, file) || file?.OCRVersion !== process.env.OCR_VERSION) { // OCR is not completed or version change
+                  logger.info('OCR is pending or JSON url is not present');
                   logger.info(`Current OCR Version: ${file?.OCRVersion} New OCR Version: ${process.env.OCR_VERSION}`);
                   file?.updateOCRVersion(process.env.OCR_VERSION || '');
                   if (this.isOCRRequired(file)) {

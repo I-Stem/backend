@@ -54,6 +54,19 @@ public static async getFeedbackCountForUserByService(userId: string, service: Fe
     const documentCount =  await FeedbackDbModel.countDocuments({userId: userId, feedbackFor: service}).lean();
     return documentCount;
 }
+
+public static async getFeedbackRatingCountForUser(userId: string, service: FeedbackCategory) {
+    let rating = 0;
+    let count = 0;
+    await FeedbackDbModel.find({userId, feedbackFor: service }).exec().then(feedback => {
+        count = feedback.length;
+        feedback.forEach(element => {
+            rating += Number(element.rating);
+        })
+    })
+    return {count, rating}
+}
+
 }
 
 export default FeedbackModel;

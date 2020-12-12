@@ -3,79 +3,187 @@
  *
  */
 
-import User from '../../../models/User';
-import { response } from '../../../utils/response';
-import * as HttpStatus from 'http-status-codes';
-import { Request, Response, NextFunction } from 'express';
-import {MessageQueue} from '../../../queues';
-import loggerFactory from '../../../middlewares/WinstonLogger';
-import emailService from '../../../services/EmailService';
-import UserModel from '../../../domain/User';
-import AuthMessageTemplates from '../../../MessageTemplates/AuthTemplates';
+import { createResponse, response } from "../../../utils/response";
+import * as HttpStatus from "http-status-codes";
+import { Request, Response, NextFunction } from "express";
+import loggerFactory from "../../../middlewares/WinstonLogger";
+import emailService from "../../../services/EmailService";
+import UserModel, { UserType } from "../../../domain/User";
+import AuthMessageTemplates from "../../../MessageTemplates/AuthTemplates";
+import InvitedUserModel, {
+    InvitedUserEnum,
+} from "../../../domain/InvitedUserModel";
+import LedgerModel from "../../../domain/LedgerModel";
+import Locals from "../../../providers/Locals";
+import UniversityModel, {
+    UniversityRoles,
+} from "../../../domain/UniversityModel";
 
 class RegisterController {
-
-    static servicename = 'RegisterController';
-    public static perform(req: Request, res: Response): any {
-        let methodname = 'perform';
+    static servicename = "RegisterController";
+    public static async perform(req: Request, res: Response) {
+        let methodname = "perform";
         let logger = loggerFactory(RegisterController.servicename, methodname);
 
-        const _email = req.body.email.toLowerCase();
+        const _email: string = req.body.email.toLowerCase();
         const _password = req.body.password;
 
-        const user = new User({
+        const user = new UserModel({
             email: _email,
             password: _password,
             userType: req.body.userType,
-            organisationName: req.body.organisationName,
-            organisationAddress: req.body.organisationAddress,
-            noStudentsWithDisability: req.body.noStudentsWithDisability,
-            fullname: req.body.fullname
+            role: UserModel.getDefaultUserRoleForUserType(req.body.userType),
+            organizationName: req.body.organizationName,
+            organizationCode: UserModel.generateOrganizationCodeFromUserTypeAndOrganizationName(
+                req.body.userType,
+                req.body.organizationName
+            ),
+            serviceRole: UserModel.getDefaultServiceRoleForUser(req.body.userType),
+            fullname: req.body.fullname,
         });
 
-        User.findOne({ email: _email }, (err, existingUser) => {
-            if (err) {
-                logger.error(`Bad Request: ${err}`);
-                return res.status(HttpStatus.BAD_REQUEST).json(
-                    response[HttpStatus.BAD_REQUEST]({
-                        message: `Bad request please try again.`
-                    })
-                );
-            }
+        try {
+            const existingUser = await UserModel.findUserByEmail(_email);
+
             if (existingUser) {
                 logger.error(`Existing account - ${existingUser.email}`);
-                return res.status(HttpStatus.CONFLICT).json(
-                    response[HttpStatus.CONFLICT]({
-                        message: `Account already exists. Please sign in to your account.`
-                    })
+                return createResponse(
+                    res,
+                    HttpStatus.CONFLICT,
+                    `Account already exists. Please sign in to your account.`
                 );
             }
-            user.save(async (err) => {
-                if (err) {
-                    logger.error(`Could not save user information for ${req.body.email}`);
-                    return res.status(HttpStatus.BAD_GATEWAY).json(
-                        response[HttpStatus.BAD_GATEWAY]({
-                            message: `An error occured while saving the user information.`
-                        })
+
+            const persistedUser = await user.persist();
+            const domainName = _email.split("@")[1];
+            const university = await UniversityModel.findUniversityByDomainName(
+                domainName
+            );
+            logger.info(`University: ${JSON.stringify(university)}`);
+            if (!persistedUser) {
+                return createResponse(
+                    res,
+                    HttpStatus.BAD_GATEWAY,
+                    "couldn't store user information"
+                );
+            }
+
+            if (university !== null) {
+                logger.info(`Updating user details for university student`);
+                UserModel.updateUserDetail(persistedUser.userId, {
+                    organizationCode: university.code,
+                    userType: UserType.UNIVERSITY,
+                    role: UniversityRoles.STUDENT,
+                    organizationName: university.name,
+                });
+                logger.info(`${JSON.stringify(user)}, ${persistedUser.userId}`);
+            }
+
+            if (req.body.verifyToken) {
+                const isUserValid = await InvitedUserModel.checkInvitedUser(
+                    _email,
+                    req.body.verifyToken
+                );
+                if (isUserValid) {
+                    logger.info(`Adding invited user`);
+                    InvitedUserModel.updateStatus(
+                        _email,
+                        InvitedUserEnum.REGISTERED
+                    );
+                    try {
+                        const invitedUserData = await InvitedUserModel.getInvitedUserByEmail(
+                            _email
+                        );
+                        if (invitedUserData) {
+                            if (
+                                invitedUserData.role == UniversityRoles.STUDENT
+                            ) {
+                                persistedUser?.changeUserRole(
+                                    UniversityRoles.STUDENT
+                                );
+                            } else {
+                                persistedUser.changeUserRole(
+                                    UniversityRoles.STAFF
+                                );
+                            }
+                            persistedUser.updateUserOrganizationCode(
+                                invitedUserData.university
+                            );
+                            persistedUser.updateVerificationStatus(true);
+                        }
+                    } catch (err) {
+                        logger.error("Error occured: %o", err);
+                    }
+
+                    LedgerModel.createCreditTransaction(
+                        persistedUser.userId,
+                        Locals.config().invitedUserCredits,
+                        "Successful verification"
+                    );
+                } else {
+                    logger.error(`Invalid email or verification token,`);
+                    return createResponse(
+                        res,
+                        HttpStatus.CONFLICT,
+                        `Invalid email or verification token. Try again with the link.`
                     );
                 }
-                const _verificationLink = `${req.body.verificationLink}?verifyToken=${user?.verifyUserToken}&email=${encodeURIComponent(_email)}`;
+            } else {
+                const _verificationLink = `${
+                    req.body.verificationLink
+                }?verifyToken=${
+                    persistedUser?.verifyUserToken
+                }&email=${encodeURIComponent(_email)}`;
 
-                const userData = await UserModel.getUserById(user._id);
-                if (userData !== null) {
-                emailService.sendEmailToUser(userData, AuthMessageTemplates.getAccountEmailVerificationMessage({
-                    name: user.fullname,
-                    verificationLink: _verificationLink
-                }));
-            }
-                logger.info(`Successfully registered ${req.body.email}`);
-                return res.status(HttpStatus.OK).json(
-                    response[HttpStatus.OK]({
-                        message: `You have been successfully registered with us!`
+                emailService.sendEmailToUser(
+                    user,
+                    AuthMessageTemplates.getAccountEmailVerificationMessage({
+                        name: persistedUser.fullname,
+                        verificationLink: _verificationLink,
                     })
                 );
-            });
-        });
+
+                if (
+                    persistedUser.userType === UserType.BUSINESS ||
+                    persistedUser.userType === UserType.UNIVERSITY
+                ) {
+                    logger.info(
+                        `got an organization request for organization name: ${persistedUser.organizationName}`
+                    );
+                    emailService.notifyIStemTeam(
+                        AuthMessageTemplates.getNewOrganizationRegistrationRequestMessage(
+                            {
+                                firstUser: persistedUser,
+                                approvalLink: `${process.env.APP_URL}/api/university/organ/req/${persistedUser.organizationCode}/approve`,
+                                rejectionLink: `${process.env.APP_URL}/api/university/organ/req/${persistedUser.organizationCode}/reject`,
+                            }
+                        )
+                    );
+
+                    const organization = new UniversityModel({
+                        code: persistedUser.organizationCode,
+                        name: persistedUser.organizationName || "",
+                        registeredByUser: persistedUser.userId,
+                    });
+
+                    await organization.persistUniversity(persistedUser.userId);
+                }
+            }
+        } catch (err) {
+            logger.error("Bad Request: %o", err);
+            return createResponse(
+                res,
+                HttpStatus.BAD_GATEWAY,
+                `Bad request please try again.`
+            );
+        }
+
+        logger.info(`Successfully registered ${req.body.email}`);
+        return createResponse(
+            res,
+            HttpStatus.OK,
+            `You have been successfully registered with us!`
+        );
     }
 }
 

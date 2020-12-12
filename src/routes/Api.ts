@@ -20,6 +20,7 @@ import ServiceRouter from './Service';
 import MentorshipRouter from './Mentorship';
 import SkillsRouter from './Skills';
 import WebinarRouter from './Webinars';
+import UniversityPortalRouter from './University';
 
 const router = Router();
 
@@ -39,5 +40,6 @@ router.use('/mentorship', MentorshipRouter);
 router.use('/skills', SkillsRouter);
 router.use('/webinars', WebinarRouter);
 router.use('/service', ServiceRouter);
+router.use('/university', UniversityPortalRouter);
 
 export default router;

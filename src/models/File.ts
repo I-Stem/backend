@@ -5,6 +5,7 @@
 
 import FileModel from '../domain/FileModel';
 import mongoose from 'mongoose';
+import { DocType } from '../domain/AfcModel';
 
 export const FileSchema = new mongoose.Schema(
     {
@@ -23,7 +24,9 @@ export const FileSchema = new mongoose.Schema(
         outputFiles: { type: Map,
          of: String},
         waitingQueue: [{ type: mongoose.Schema.Types.ObjectId, ref: ['AFC', 'VideoCaptioning']}],
-        OCRVersion: { type: String }
+        OCRVersion: { type: String },
+        ocrFileURL: { type: String },
+        mathOcrFileUrl: { type: String }
     },
     {
         id: true,

@@ -2,6 +2,7 @@ import loggerFactory from '../middlewares/WinstonLogger';
 import MessageModel from '../domain/MessageModel';
 import EmailQueue from '../queues/message';
 import UserModel from '../domain/User';
+import { InvitedUser } from '../domain/InvitedUserModel';
 
 const mailer = require('nodemailer-promise');
 const aws = require('aws-sdk');
@@ -74,11 +75,24 @@ public async serviceUpgradeRequest(message: MessageModel) {
     EmailQueue.dispatch(message);
 }
 
+public async notifyIStemTeam(message: MessageModel) {
+    message.receiverEmail = process.env.CUSTOMER_FEEDBACK_RECEIVING_EMAIL;
+    EmailQueue.dispatch(message);
+}
+
 public async sendEmailToUser(user: UserModel, message: MessageModel) {
     const logger = loggerFactory(EmailService.ServiceName, 'sendEmailToUser');
     logger.info('sending email to user: ' + user.email);
     message.receiverEmail = user.email;
     message.receiverId = user.userId;
+    EmailQueue.dispatch(message);
+}
+
+public async sendEmailToInvitedUser(message: MessageModel, user: InvitedUser){
+    const logger = loggerFactory(EmailService.ServiceName, 'sendEmailToInvitedUser');
+    logger.info('sending email to user: ' + user.email);
+    message.receiverEmail = user.email;
+    message.receiverId = user._id;
     EmailQueue.dispatch(message);
 }
 

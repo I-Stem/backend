@@ -115,7 +115,8 @@ class AFCController {
                 outputFormat: req.body.outputFormat,
                 inputFileId: req.body.inputFileId,
                 status: AFCRequestStatus.REQUEST_INITIATED,
-                docType: req.body.docType
+                docType: req.body.docType,
+                inputFileLink: req.body.inputFileLink,
             });
 
             const user = await UserModel.getUserById(userId);
@@ -172,7 +173,7 @@ pageRanges: [req.body.escalatedPageRange]
 
         try {
         const file = await FileModel.getFileByHash(req.body.hash);
-        
+        logger.info(`${req.body.hash}, ${req.body.pages}, ${req.body.docType}`);
         if (req.body.json?.error || (Object.keys(req.body.json).length <= 1 && req.body.json['0'].length === 0)) {
 
     emailService.sendInternalDiagnosticEmail(ExceptionTemplates.getOCRExceptionMessage({
@@ -183,16 +184,15 @@ pageRanges: [req.body.escalatedPageRange]
     stackTrace: 'none, as the error in ocr API, please see logs of accommodation-automation repo'
 }));
 
-    await file?.updateOCRResults(req.body.hash, req.body.json, req.body.pages);
-
     file?.waitingQueue.forEach(async (requestId) => {
     const afcRequest = await AfcModel.getAfcModelById(requestId);
     await afcRequest?.changeStatusTo(AFCRequestStatus.OCR_FAILED);
 });
+    if(file)
+        await new FileModel(file).clearWaitingQueue();
     return createResponse(res, HttpStatus.OK, 'callback received');
 }
-
-        await file?.updateOCRResults(req.body.hash, req.body.json, req.body.pages);
+        await file?.updateOCRResults(req.body.hash, req.body.json, req.body.pages, req.body.docType);
 
         file?.waitingQueue.forEach(afcRequestId => {
     AfcResponseQueue.dispatch({

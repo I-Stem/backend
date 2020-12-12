@@ -23,13 +23,14 @@ class FileUpload {
         const methodname = 'upload';
         const logger = loggerFactory(FileUpload.servicename, methodname);
         let hash = String(req.fields?.hash as string ?? '');
-        logger.info(`Received file: ${req.files?.file.name}`);
+        let file = req.files?.file as any;
+        logger.info(`Received file: ${file?.name}`);
         File.findOne({ hash: hash })
         .then(result => {
             if (result === null) {
                 logger.info('File hash not found in existing files...');
-                let filename = req.files?.file.name.replace(/\s+/g, '') || '';
-                let file = req.files?.file;
+                let filename = file?.name.replace(/\s+/g, '') || '';
+
                 const loggedInUser = res.locals.user;
                 logger.info(`Stripped filename: ${filename}`);
                 logger.info(`Uploading file with name: ${file?.name}`);

@@ -7,7 +7,7 @@ import { IAFC } from '../interfaces/models/afc';
 import mongoose from 'mongoose';
 
 import ReviewSchema from './Review';
-import AfcModel, { AFCRequestOutputFormat, AFCRequestStatus } from '../domain/AfcModel';
+import AfcModel, { AFCRequestOutputFormat, AFCRequestStatus, DocType } from '../domain/AfcModel';
 import { string } from '@hapi/joi';
 
 const mongooseFuzzySearching = require('mongoose-fuzzy-searching');
@@ -65,7 +65,9 @@ enum: allowedAFCRequestStatuses,
         tag: { type: String, index : true},
         escalatedPageRange: { type: String },
         review: ReviewSchema,
-        reviews: [ReviewSchema]
+        reviews: [ReviewSchema],
+        inputFileLink: { type: String },
+        expiryTime: {type: Date}
     },
     {
         toJSON: { virtuals: true, getters: true },

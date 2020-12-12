@@ -3,7 +3,11 @@
  *
  */
 
+<<<<<<< HEAD
 import User, { UserRoleEnum } from '../../../models/User';
+=======
+import User, { ServiceRoleEnum, UserRoleEnum } from '../../../models/User';
+>>>>>>> e02d862... -- Squash commits --
 import { response } from '../../../utils/response';
 import * as HttpStatus from 'http-status-codes';
 import { Request, Response } from 'express';
@@ -84,7 +88,7 @@ class VerifyController {
                     const allEmails: string[] = Locals.config().userEmails.split(',');
                     if (allEmails.some((email) => email === user.email)) {
                         const userInstance = await UserModel.getUserByEmail(user.email);
-                        userInstance?.changeUserRole( UserRoleEnum.PREMIUM);
+                        userInstance?.changeUserServiceRole( ServiceRoleEnum.PREMIUM);
                         logger.info(`User Role upgrade for special users`);
                     }
                 }
