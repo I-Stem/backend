@@ -21,6 +21,7 @@ router.post('/',
         AFCController.post(req, res);
     }
 );
+router.post('/:id', AFCController.updateAfc);
 router.post('/callback', AFCController.afcCallback);
 
 router.patch('/:id/review', AFCController.submitAFCReview);

@@ -30,7 +30,8 @@ const allowedAFCRequestStatuses = [
     AFCRequestStatus.FORMATTING_COMPLETED,
     AFCRequestStatus.FORMATTING_FAILED,
     AFCRequestStatus.ESCALATION_REQUESTED,
-    AFCRequestStatus.ESCALATION_RESOLVED
+    AFCRequestStatus.ESCALATION_RESOLVED,
+    AFCRequestStatus.RETRY_REQUESTED,
 ];
 
 export const AFCSchema = new mongoose.Schema(

@@ -14,7 +14,7 @@ import AfcResponseQueue from '../../queues/afcResponse';
 import loggerFactory from '../../middlewares/WinstonLogger';
 import { getFormattedJson } from '../../utils/formatter';
 import emailService from '../../services/EmailService';
-import AfcModel, { AFCRequestStatus, AFCTriggerer, DocType } from '../../domain/AfcModel';
+import AfcModel, { AFCRequestProps, AFCRequestStatus, AFCTriggerer, DocType } from '../../domain/AfcModel';
 import UserModel from '../../domain/User';
 import FileModel from '../../domain/FileModel';
 import ExceptionTemplates from '../../MessageTemplates/ExceptionTemplates';
@@ -36,7 +36,8 @@ function mapAFCRequestStatusToUIStatus(status: AFCRequestStatus) {
         [AFCRequestStatus.FORMATTING_COMPLETED, 2],
         [AFCRequestStatus.FORMATTING_FAILED, 3],
         [AFCRequestStatus.ESCALATION_REQUESTED, 4],
-        [AFCRequestStatus.ESCALATION_RESOLVED, 5]
+        [AFCRequestStatus.ESCALATION_RESOLVED, 5],
+        [AFCRequestStatus.RETRY_REQUESTED, 6]
         ]);
 
     return statusMap.get(status) || 1;
@@ -134,6 +135,20 @@ class AFCController {
         }
 }
 
+public static async updateAfc(req: Request<{id: string}>, res: Response) {
+    const methodname = 'updateaAfc';
+    const logger = loggerFactory(AFCController.servicename, methodname);
+    logger.info(`Update AFC request: ${req.params.id}`)
+    try{
+    const afc = await AfcModel.getAfcModelById(req.params.id);
+    if(afc)
+    await afc.changeStatusTo(AFCRequestStatus.RETRY_REQUESTED);
+    }
+    catch (err){
+        return createResponse(res, HttpStatus.BAD_GATEWAY, 'Internal server error');
+    }
+    return createResponse(res, HttpStatus.OK, 'successfullly updated Afc request');
+}
     public  static async escalateRequest(req: Request, res: Response) {
         let methodname = 'escalateRequest';
         let logger = loggerFactory(AFCController.servicename, methodname);
