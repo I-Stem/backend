@@ -1,0 +1,43 @@
+image: 
+
+# Cache modules in between jobs
+cache:
+  untracked: true
+  key: "$CI_PROJECT_ID"
+  paths:
+    - node_modules/
+    - _site/vendor/
+    - .bundled/
+    - .yarn
+
+before_script:
+  - yarn config set cache-folder .yarn
+  - yarn
+
+stages:
+  - test
+  - staging
+
+lint:
+  stage: test
+  script:
+    - yarn lint
+
+# test:
+#   stage: test
+#   script:
+#     - cp .env.example .env
+#     - sed -i 's/mongodb:\/\/127.0.0.1\/mustread/$MONGOOSE_URL/g' .env
+#     - cat .env
+#     - yarn test
+
+
+staging:
+  type: deploy
+  stage: staging
+  only:
+    - shadow
+    - master
+    - pre-release
+  script:
+    - dpl --provider=heroku --app=$HEROKU_APP_STAGING --api-key=$HEROKU_API_KEY

@@ -1,0 +1,31 @@
+{
+    "presets": [
+        ["@babel/preset-env", { "targets": { "node": "current" } }],
+        "@babel/preset-typescript"
+    ],
+    "plugins": [
+        [
+            "module-resolver",
+            {
+                "root": ["./dist"],
+                "alias": {
+                    "test": "./test",
+                    "underscore": "lodash",
+                    "@lip/constants": "./dist/constants",
+                    "@lip/controllers": "./dist/controllers",
+                    "@lip/exceptions": "./dist/exceptions",
+                    "@lip/interfaces": "./dist/interfaces",
+                    "@lip/middlewares": "./dist/middlewares",
+                    "@lip/models": "./dist/models",
+                    "@lip/providers": "./dist/providers",
+                    "@lip/queues": "./dist/queues",
+                    "@lip/routes": "./dist/routes",
+                    "@lip/seed": "./dist/seed",
+                    "@lip/test": "./dist/test",
+                    "@lip/utils": "./dist/utils",
+                    "@lip/validators": "./dist/validators"
+                }
+            }
+        ]
+    ]
+}
