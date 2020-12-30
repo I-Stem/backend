@@ -3,10 +3,12 @@ import UniversityDbModel from "../models/University";
 import AfcModel from "./AfcModel";
 import FeedbackModel, { FeedbackCategory } from "./FeedbackModel";
 import FileModel from "./FileModel";
-import UserModel from "./User";
+import UserModel from "./user/User";
 import UserDBModel from "../models/User";
 import VcModel from "./VcModel";
 import User from "../models/User";
+import EmailService from "../services/EmailService";
+import AuthMessageTemplates from "../MessageTemplates/AuthTemplates";
 
 export const enum EscalationsHandledBy {
     UNIVERSITY = "UNIVERSITY",
@@ -22,6 +24,7 @@ export const enum DomainAccess {
 export const enum UniversityRoles {
     STUDENT = "STUDENT",
     STAFF = "STAFF",
+    REMEDIATOR = "REMEDIATOR"
 }
 
 export const enum UniversityAccountStatus {
@@ -300,21 +303,25 @@ class UniversityModel {
     static async getStudentsByUniversityCode(
         universityCode: string,
         limit: number,
-        offset: number
+        offset: number,
+        searchString?: string
     ): Promise<any[]> {
         const logger = loggerFactory(
             UniversityModel.ServiceName,
             "getStudentsByUniversityId"
         );
         const studentData: any[] = [];
-        logger.info(`limit and offset: ${limit} ${offset}`);
+        logger.info(
+            `limit, offset and search string: ${limit} ${offset} ${searchString}`
+        );
+        logger.info("getting student details for the university");
         const students = await UserModel.getUserDetailsByOrganizationCodeAndRole(
             universityCode,
             UniversityRoles.STUDENT,
             offset,
-            limit
+            limit,
+            searchString || ""
         );
-        logger.info("students details: %o", students);
         for (let i = 0; i < students.length; ++i) {
             const afcRequests = AfcModel.getAfcRequestCountForUser(
                 students[i]._id
@@ -383,7 +390,7 @@ class UniversityModel {
                 afcCompletedActivity,
                 afcActiveActivity,
             ]);
-            logger.info(`Student info: ${JSON.stringify(dataResolver)} `);
+            logger.info(`Student id: ${userId} `);
             return {
                 afcActivity: dataResolver[0],
                 vcActivity: dataResolver[1],
@@ -442,6 +449,30 @@ class UniversityModel {
             university = null;
         }
         return university;
+    }
+
+    public static async performUniversityAccountPreApprovalRequest(registeringUser:UserModel) {
+        const logger = loggerFactory(UniversityModel.ServiceName, "performUniversityAccountPreApprovalRequest");
+        logger.info(
+            `got an organization request for organization name: ${registeringUser.organizationName}`
+        );
+        EmailService.notifyIStemTeam(
+            AuthMessageTemplates.getNewOrganizationRegistrationRequestMessage(
+                {
+                    firstUser: registeringUser,
+                    approvalLink: `${process.env.APP_URL}/${process.env.UNIVERSITY_REQUEST_API}/${registeringUser.organizationCode}/approve`,
+                    rejectionLink: `${process.env.APP_URL}/${process.env.UNIVERSITY_REQUEST_API}/${registeringUser.organizationCode}/reject`,
+                }
+            )
+        );
+
+        const organization = new UniversityModel({
+            code: registeringUser.organizationCode,
+            name: registeringUser.organizationName || "",
+            registeredByUser: registeringUser.userId,
+        });
+
+        await organization.persistUniversity(registeringUser.userId);
     }
 }
 

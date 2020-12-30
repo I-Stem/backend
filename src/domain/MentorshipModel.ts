@@ -36,6 +36,7 @@ export interface MentorshipModelProps {
     cancelMenteeship: Boolean;
     mentorshipStatus: string[];
     createdAt?: Date;
+    contactNumber: string;
 }
 
 class MentorshipModel {
@@ -61,6 +62,7 @@ class MentorshipModel {
     cancelMenteeship: Boolean = false;
     mentorshipStatus: string[] = [];
     createdAt?: Date;
+    contactNumber: string;
 
     constructor(props: MentorshipModelProps) {
         this.mentorshipId = props.mentorshipId || props._id;
@@ -83,6 +85,7 @@ class MentorshipModel {
         this.cancelMenteeship = props.cancelMenteeship;
         this.createdAt = props.createdAt;
         this.mentorshipStatus = props.mentorshipStatus;
+        this.contactNumber = props.contactNumber;
     }
 
     persistMentorship(currUserId: string) {

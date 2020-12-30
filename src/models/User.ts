@@ -10,9 +10,10 @@ import Ledger from "./Ledger";
 import * as mongoose from "mongoose";
 import * as crypto from "crypto";
 import loggerFactory from "../middlewares/WinstonLogger";
-import UserModel, { OtherUserRoles, UserType } from "../domain/User";
+import { OAuthProvider, OtherUserRoles, UserType } from "../domain/user";
 import { UniversityRoles } from "src/domain/UniversityModel";
 
+const mongooseFuzzySearching = require("mongoose-fuzzy-searching");
 const servicename = "User";
 // Create the model schema & register your custom methods here
 export interface IUserModel extends IUser, mongoose.Document {
@@ -65,6 +66,7 @@ export const UserSchema = new mongoose.Schema(
                 UserRoleEnum.ADMIN,
                 UniversityRoles.STAFF,
                 UniversityRoles.STUDENT,
+                UniversityRoles.REMEDIATOR,
                 OtherUserRoles.MENTOR,
                 OtherUserRoles.UNKNOWN,
             ],
@@ -91,20 +93,18 @@ export const UserSchema = new mongoose.Schema(
         isVerified: { type: Boolean, default: false },
         showOnboardStaffCard: { type: Boolean, default: true },
         showOnboardStudentsCard: { type: Boolean, default: true },
-        facebook: { type: String },
-        twitter: { type: String },
-        google: { type: String },
-        github: { type: String },
-        instagram: { type: String },
-        linkedin: { type: String },
+         oauthProvider: { type: String, 
+        enum: [OAuthProvider.FACEBOOK, OAuthProvider.GITHUB, OAuthProvider.GOOGLE, OAuthProvider.TWITTER, OAuthProvider.PASSWORD],
+    required: true,
+    default: OAuthProvider.PASSWORD
+},
         steam: { type: String },
+        oauthProviderId: {type: String},
         tokens: Array,
 
         organizationName: { type: String },
         organizationCode: { type: String },
         organisationAddress: { type: String },
-        noStudentsWithDisability: { type: String },
-        orgRole: { type: String },
 
         fullname: { type: String },
         gender: { type: String },
@@ -350,6 +350,9 @@ UserSchema.methods.checkCredits = async function (
 
 UserSchema.virtual("currentStatus").get(function (this: { statusLog: [] }) {
     return this.statusLog[this.statusLog.length - 1];
+});
+UserSchema.plugin(mongooseFuzzySearching, {
+    fields: ["fullName", "rollNumber"],
 });
 
 const User = mongoose.model<IUserModel>("User", UserSchema);

@@ -8,7 +8,7 @@ import * as HttpStatus from "http-status-codes";
 import { Request, Response, NextFunction } from "express";
 import loggerFactory from "../../../middlewares/WinstonLogger";
 import emailService from "../../../services/EmailService";
-import UserModel, { UserType } from "../../../domain/User";
+import UserModel, { OAuthProvider, UserType } from "../../../domain/user/User";
 import AuthMessageTemplates from "../../../MessageTemplates/AuthTemplates";
 import InvitedUserModel, {
     InvitedUserEnum,
@@ -18,6 +18,9 @@ import Locals from "../../../providers/Locals";
 import UniversityModel, {
     UniversityRoles,
 } from "../../../domain/UniversityModel";
+import { UserDomainErrors } from "../../../domain/user/UserDomainErrors";
+import passport from "passport";
+import Login from "./Login";
 
 class RegisterController {
     static servicename = "RegisterController";
@@ -28,7 +31,8 @@ class RegisterController {
         const _email: string = req.body.email.toLowerCase();
         const _password = req.body.password;
 
-        const user = new UserModel({
+        try {
+        const user = await UserModel.registerUser({
             email: _email,
             password: _password,
             userType: req.body.userType,
@@ -38,146 +42,40 @@ class RegisterController {
                 req.body.userType,
                 req.body.organizationName
             ),
-            serviceRole: UserModel.getDefaultServiceRoleForUser(
-                req.body.userType
-            ),
+            serviceRole: UserModel.getDefaultServiceRoleForUser(req.body.userType),
             fullname: req.body.fullname,
-        });
-
-        try {
-            const existingUser = await UserModel.findUserByEmail(_email);
-
-            if (existingUser) {
-                logger.error(`Existing account - ${existingUser.email}`);
-                return createResponse(
-                    res,
-                    HttpStatus.CONFLICT,
-                    `Account already exists. Please sign in to your account.`
-                );
-            }
-
-            const persistedUser = await user.persist();
-            const domainName = _email.split("@")[1];
-            const university = await UniversityModel.findUniversityByDomainName(
-                domainName
-            );
-            logger.info(`University: ${JSON.stringify(university)}`);
-            if (!persistedUser) {
-                return createResponse(
-                    res,
-                    HttpStatus.BAD_GATEWAY,
-                    "couldn't store user information"
-                );
-            }
-
-            if (university !== null) {
-                logger.info(`Updating user details for university student`);
-                UserModel.updateUserDetail(persistedUser.userId, {
-                    organizationCode: university.code,
-                    userType: UserType.UNIVERSITY,
-                    role: UniversityRoles.STUDENT,
-                    organizationName: university.name,
-                });
-                logger.info(`${JSON.stringify(user)}, ${persistedUser.userId}`);
-            }
-
-            if (req.body.verifyToken) {
-                const isUserValid = await InvitedUserModel.checkInvitedUser(
-                    _email,
-                    req.body.verifyToken
-                );
-                if (isUserValid) {
-                    logger.info(`Adding invited user`);
-                    InvitedUserModel.updateStatus(
-                        _email,
-                        InvitedUserEnum.REGISTERED
-                    );
-                    try {
-                        const invitedUserData = await InvitedUserModel.getInvitedUserByEmail(
-                            _email
-                        );
-                        if (invitedUserData) {
-                            if (
-                                invitedUserData.role == UniversityRoles.STUDENT
-                            ) {
-                                persistedUser?.changeUserRole(
-                                    UniversityRoles.STUDENT
-                                );
-                            } else {
-                                persistedUser.changeUserRole(
-                                    UniversityRoles.STAFF
-                                );
-                            }
-                            persistedUser.updateUserOrganizationCode(
-                                invitedUserData.university
-                            );
-                            persistedUser.updateVerificationStatus(true);
-                        }
-                    } catch (err) {
-                        logger.error("Error occured: %o", err);
-                    }
-
-                    LedgerModel.createCreditTransaction(
-                        persistedUser.userId,
-                        Locals.config().invitedUserCredits,
-                        "Successful verification"
-                    );
-                } else {
-                    logger.error(`Invalid email or verification token,`);
+            oauthProvider: OAuthProvider.PASSWORD
+        }, req.body.verifyToken, req.body.verificationLink);
+        } catch (error) {
+            logger.error("Bad Request: %o", error);
+            switch(error.name) {
+                case UserDomainErrors.UserAlreadyRegisteredError:
                     return createResponse(
                         res,
                         HttpStatus.CONFLICT,
-                        `Invalid email or verification token. Try again with the link.`
+                        `Account already exists. Please sign in to your account.`
                     );
-                }
-            } else {
-                const _verificationLink = `${
-                    req.body.verificationLink
-                }?verifyToken=${
-                    persistedUser?.verifyUserToken
-                }&email=${encodeURIComponent(_email)}`;
+    break;
 
-                emailService.sendEmailToUser(
-                    user,
-                    AuthMessageTemplates.getAccountEmailVerificationMessage({
-                        name: persistedUser.fullname,
-                        verificationLink: _verificationLink,
-                    })
-                );
+    case UserDomainErrors.UserInfoSaveError:
+        return createResponse(res, HttpStatus.BAD_GATEWAY, "couldn't save user info");
+        break;
 
-                if (
-                    persistedUser.userType === UserType.BUSINESS ||
-                    persistedUser.userType === UserType.UNIVERSITY
-                ) {
-                    logger.info(
-                        `got an organization request for organization name: ${persistedUser.organizationName}`
-                    );
-                    emailService.notifyIStemTeam(
-                        AuthMessageTemplates.getNewOrganizationRegistrationRequestMessage(
-                            {
-                                firstUser: persistedUser,
-                                approvalLink: `${process.env.APP_URL}/${process.env.UNIVERSITY_REQUEST_API}/${persistedUser.organizationCode}/approve`,
-                                rejectionLink: `${process.env.APP_URL}/${process.env.UNIVERSITY_REQUEST_API}/${persistedUser.organizationCode}/reject`,
-                            }
-                        )
-                    );
-
-                    const organization = new UniversityModel({
-                        code: persistedUser.organizationCode,
-                        name: persistedUser.organizationName || "",
-                        registeredByUser: persistedUser.userId,
-                    });
-
-                    await organization.persistUniversity(persistedUser.userId);
-                }
-            }
-        } catch (err) {
-            logger.error("Bad Request: %o", err);
+        case UserDomainErrors.InvalidInvitationTokenError:
             return createResponse(
+                res,
+                HttpStatus.CONFLICT,
+                `Invalid email or verification token. Try again with the link.`
+            );
+break;
+
+    default:
+              return createResponse(
                 res,
                 HttpStatus.BAD_GATEWAY,
                 `Bad request please try again.`
             );
+            }
         }
 
         logger.info(`Successfully registered ${req.body.email}`);
@@ -186,6 +84,72 @@ class RegisterController {
             HttpStatus.OK,
             `You have been successfully registered with us!`
         );
+    }
+
+    public static async handleLoginOrRegistrationByOAuth(req:Request, res:Response, oauthProvider:string) {
+        const logger = loggerFactory(RegisterController.servicename, "handleLoginOrRegistrationByOauth");
+        try {
+            passport.authenticate(
+                oauthProvider,
+                {
+                    failureRedirect: `${process.env.PORTAL_URL}/login`,
+                    session: false,
+                },
+                (error, user) => {
+                    try {
+                    const logger = loggerFactory("AuthRouter", "googleRedirectCallback");
+                    if(error) {
+                       throw error;
+                    }
+        
+
+
+                    const token = Login.generateJWTTokenForUser(user);
+                    res.redirect(
+                        `${process.env.PORTAL_URL}/login/googleLogin?token=` + token
+                    );
+
+                    } catch(error) {
+                        logger.error("error: " + error.name);
+switch(error.name) {
+    case UserDomainErrors.InvitationEmailMismatchError:
+        res.redirect(
+            `${process.env.PORTAL_URL}/login/googleLogin?message=${encodeURIComponent(error.message)}`
+        );
+break;
+
+case UserDomainErrors.UserAlreadyRegisteredError:
+    return res.redirect(
+        `${process.env.PORTAL_URL}/login/googleLogin?message=${encodeURIComponent(error.message)}`
+    );
+break;
+
+case UserDomainErrors.UserInfoSaveError:
+return res.redirect(`${process.env.PORTAL_URL}/login/googleLogin?message=${encodeURIComponent(error.message)}`);
+break;
+
+case UserDomainErrors.InvalidInvitationTokenError:
+return res.redirect(`${process.env.PORTAL_URL}/login/googleLogin?message=${encodeURIComponent(error.message)}`);
+break;
+
+case UserDomainErrors.NoSuchUserError:
+return res.redirect(`${process.env.PORTAL_URL}/login/googleLogin?message=${encodeURIComponent(error.message)}`);
+break;
+
+        default:
+            res.redirect(
+                `${process.env.PORTAL_URL}/login/googleLogin?message=${encodeURIComponent("unknown error")}`
+            );
+    }
+                    }
+                }
+            )(req, res);
+            
+        
+        } catch(error) {
+            logger.error("error: " + error.name);
+
+        }
     }
 }
 

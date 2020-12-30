@@ -14,7 +14,7 @@ import emailService from '../services/EmailService';
 import ExceptionMessageTemplates, { ExceptionTemplateNames } from '../MessageTemplates/ExceptionTemplates';
 import MLModelQueue from './MLModelQueue';
 import FileModel from '../domain/FileModel';
-import UserModel from '../domain/User';
+import UserModel from '../domain/user/User';
 import ServiceRequestTemplates from '../MessageTemplates/ServiceRequestTemplates';
 import * as https from 'https';
 

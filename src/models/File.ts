@@ -23,10 +23,11 @@ export const FileSchema = new mongoose.Schema(
         },
         outputFiles: { type: Map,
          of: String},
-        waitingQueue: [{ type: mongoose.Schema.Types.ObjectId, ref: ['AFC', 'VideoCaptioning']}],
+        ocrWaitingQueue: [{ type: mongoose.Schema.Types.ObjectId, ref: ['AFC', 'VideoCaptioning']}],
         OCRVersion: { type: String },
         ocrFileURL: { type: String },
-        mathOcrFileUrl: { type: String }
+        mathOcrFileUrl: { type: String },
+        mathOcrWaitingQueue: [{ type: mongoose.Schema.Types.ObjectId, ref: ['AFC', 'VideoCaptioning']}],
     },
     {
         id: true,

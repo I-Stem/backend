@@ -3,7 +3,7 @@ import loggerFactory from "../middlewares/WinstonLogger";
 import LedgerModel from "./LedgerModel";
 import MessageQueue from "../queues/message";
 import ReviewModel from "./ReviewModel";
-import UserModel from "./User";
+import UserModel from "./user/User";
 import EmailService from "../services/EmailService";
 import ServiceRequestTemplates from "../MessageTemplates/ServiceRequestTemplates";
 import got from "got/dist/source";

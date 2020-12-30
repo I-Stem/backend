@@ -7,7 +7,7 @@ import { createResponse } from '../../utils/response';
 import emailService from '../../services/EmailService';
 import AuthTemplates from '../../MessageTemplates/AuthTemplates';
 import loggerFactory from '../../middlewares/WinstonLogger';
-import UserModel from '../../domain/User';
+import UserModel from '../../domain/user/User';
 import ServiceRequestTemplates from '../../MessageTemplates/ServiceRequestTemplates';
 import User, { ServiceRoleEnum, UserRoleEnum, UserStatusEnum } from '../../models/User';
 

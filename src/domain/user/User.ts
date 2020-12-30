@@ -8,8 +8,19 @@ import { IUser, Tokens } from "../interfaces/models/user";
 import loggerFactory from "../middlewares/WinstonLogger";
 import LedgerModel from "./LedgerModel";
 import { plainToClass } from "class-transformer";
-import { doesListContainElement } from "../utils/library";
-import { UniversityRoles } from "./UniversityModel";
+import { doesListContainElement } from "../../utils/library";
+import UniversityModel, { UniversityRoles } from "../UniversityModel";
+import InvitedUserModel, { InvitedUserEnum } from "../InvitedUserModel";
+import {
+    InvalidInvitationTokenError,
+    UserAlreadyRegisteredError,
+    UserDomainErrors,
+    UserInfoSaveError,
+} from "./UserDomainErrors";
+import EmailService from "../../services/EmailService";
+import AuthMessageTemplates from "../../MessageTemplates/AuthTemplates";
+import Locals from "../../providers/Locals";
+import bcrypt from "bcrypt";
 
 export enum UserType {
     I_STEM = "I_STEM",
@@ -22,6 +33,14 @@ export enum UserType {
 export enum OtherUserRoles {
     MENTOR = "MENTOR",
     UNKNOWN = "UNKNOWN",
+}
+
+export const enum OAuthProvider {
+    GOOGLE = "GOOGLE",
+    FACEBOOK = "FACEBOOK",
+    TWITTER = "TWITTER",
+    GITHUB = "GITHUB",
+    PASSWORD = "PASSWORD",
 }
 
 export interface UserModelProps {
@@ -70,6 +89,8 @@ class UserModel {
     showOnboardStudentsCard?: boolean;
     showOnboardStaffCard?: boolean;
     serviceRole: ServiceRoleEnum;
+    oauthProvider: OAuthProvider;
+    oauthProviderId?: string;
 
     constructor(props: UserModelProps) {
         this.userId = props?.userId || props?._id || "";
@@ -105,6 +126,10 @@ class UserModel {
         }
 
         return null;
+    }
+
+    public async comparePassword(plainText: string): Promise<boolean> {
+        return await bcrypt.compare(plainText, this.password);
     }
 
     public static updateUniversityCardsForUser(userId: string, data: any) {
@@ -451,7 +476,8 @@ class UserModel {
     }
 
     public static async countStudentsInUniversityByUniversityCode(
-        universityCode: string
+        universityCode: string,
+        searchString: string
     ): Promise<number> {
         const logger = loggerFactory(
             UserModel.servicename,
@@ -463,10 +489,159 @@ class UserModel {
         const count = User.countDocuments({
             organizationCode: universityCode,
             role: UniversityRoles.STUDENT,
+            $or: [
+                { fullname: new RegExp(searchString, "i") },
+                { rollNumber: new RegExp(searchString, "i") },
+            ],
         });
         return count;
     }
-}
 
+    public static async registerUser(
+        props: UserModelProps,
+        invitationToken: string | undefined,
+        emailVerificationLink: string | undefined
+    ): Promise<UserModel | null> {
+        const logger = loggerFactory(UserModel.servicename, "registerUser");
+
+        const newUser = new UserModel(props);
+        try {
+            const existingUser = await UserModel.findUserByEmail(newUser.email);
+
+            if (existingUser) {
+                throw new UserAlreadyRegisteredError(
+                    `User already exists for email: ${newUser.email}`
+                );
+            }
+
+            const persistedUser = await newUser.persist();
+            if (!persistedUser) {
+                throw new UserInfoSaveError("couldn't save information");
+            }
+
+        if (invitationToken) {
+            await persistedUser?.updateDetailsForInvitedUser(invitationToken);
+                        } else {
+                        if(props.oauthProvider === OAuthProvider.PASSWORD) {
+            await persistedUser?.createAccountEmailVerificationRequest(emailVerificationLink || "");
+                        }
+
+persistedUser.associateUserWithOrganization();
+
+
+                            if (
+                                persistedUser?.userType === UserType.BUSINESS ||
+                                persistedUser?.userType === UserType.UNIVERSITY
+                            ) {
+                                await UniversityModel.performUniversityAccountPreApprovalRequest(persistedUser);
+                            }
+                        }
+
+                        if(invitationToken ||  persistedUser.oauthProvider !== OAuthProvider.PASSWORD) {
+                            await persistedUser.postAccountVerificationProcess();
+                        }
+return persistedUser;
+        } catch(error) {
+            logger.error("encountered error: " + error.name);
+            throw error;
+        }
+
+        return null;
+    }
+
+    public async associateUserWithOrganization() {
+        const logger = loggerFactory(
+            UserModel.servicename,
+            "associateUserWithOrganization"
+        );
+        const domainName = this.email.split("@")[1];
+        const university = await UniversityModel.findUniversityByDomainName(
+            domainName
+        );
+        logger.info(`University: ${JSON.stringify(university)}`);
+
+        if (university !== null) {
+            logger.info(`Updating user details for university student`);
+            UserModel.updateUserDetail(this.userId, {
+                organizationCode: university.code,
+                userType: UserType.UNIVERSITY,
+                role: UniversityRoles.STUDENT,
+                organizationName: university.name,
+            });
+        }
+    }
+
+    public async updateDetailsForInvitedUser(invitationToken: string) {
+        const logger = loggerFactory(
+            UserModel.servicename,
+            "updateDetailsForInvitedUser"
+        );
+
+        const isUserValid = await InvitedUserModel.checkInvitedUser(
+            this.email,
+            invitationToken
+        );
+
+        if (isUserValid) {
+            logger.info(`Adding invited user`);
+            InvitedUserModel.updateStatus(
+                this.email,
+                InvitedUserEnum.REGISTERED
+            );
+
+            try {
+                const invitedUserData = await InvitedUserModel.getInvitedUserByEmail(
+                    this.email
+                );
+                if (invitedUserData) {
+                    if (invitedUserData.role == UniversityRoles.STUDENT) {
+                        this.changeUserRole(UniversityRoles.STUDENT);
+                    } else {
+                        this.changeUserRole(UniversityRoles.STAFF);
+                    }
+                    this.updateUserOrganizationCode(invitedUserData.university);
+                    this.updateVerificationStatus(true);
+                }
+            } catch (err) {
+                logger.error("Error occured: %o", err);
+            }
+        } else {
+            logger.error(`Invalid email or verification token,`);
+            throw new InvalidInvitationTokenError(
+                `invalid token for user: ${this.email}`
+            );
+        }
+    }
+
+    public async createAccountEmailVerificationRequest(verificationLink:string) {
+        const logger = loggerFactory(UserModel.servicename, "createAccountEmailVerificationRequest");
+        
+        const _verificationLink = `${
+            verificationLink
+        }?verifyToken=${
+            this.verifyUserToken
+        }&email=${encodeURIComponent(this.email)}`;
+        logger.info("generating email verification link with query param: " + _verificationLink);
+        EmailService.sendEmailToUser(
+            this,
+            AuthMessageTemplates.getAccountEmailVerificationMessage({
+                name: this.fullname,
+                verificationLink: _verificationLink,
+            })
+        );
+    }
+
+    public async postAccountVerificationProcess() {
+        const logger = loggerFactory(
+            UserModel.servicename,
+            "postAccountVerificationProcess"
+        );
+        LedgerModel.createCreditTransaction(
+            this.userId,
+            Locals.config().invitedUserCredits,
+            "Successful verification"
+        );
+    }
+}
 
 export default UserModel;

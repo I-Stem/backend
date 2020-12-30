@@ -10,7 +10,7 @@ import InvitedUserModel, {
 import UniversityModel, {
     UniversityAccountStatus,
 } from "../../domain/UniversityModel";
-import UserModel from "../../domain/User";
+import UserModel from "../../domain/user/User";
 import emailService from "../../services/EmailService";
 import AuthMessageTemplates from "../../MessageTemplates/AuthTemplates";
 
@@ -27,13 +27,15 @@ class UniversityController {
                 "using the organization code:  " +
                     res.locals.user.organizationCode
             );
+            const searchString = req.query.searchString || "";
+
             const details = await UniversityModel.getStudentsByUniversityCode(
                 res.locals.user.organizationCode,
                 Number(req.query.limit),
-                Number(req.query.offset)
+                Number(req.query.offset),
+                String(searchString)
             );
             if (details.length) {
-                logger.info;
                 return createResponse(
                     res,
                     HttpStatus.OK,
@@ -410,7 +412,6 @@ class UniversityController {
             rollNumber: String(req.body.rollNumber),
         });
         if (user) {
-            console.log(user);
             return createResponse(
                 res,
                 HttpStatus.OK,
@@ -434,8 +435,10 @@ class UniversityController {
         logger.info(
             `student count for university: ${res.locals.user.organizationCode}`
         );
+        const searchString = req.query.searchString || "";
         const count = await UserModel.countStudentsInUniversityByUniversityCode(
-            String(res.locals.user.organizationCode)
+            String(res.locals.user.organizationCode),
+            String(searchString)
         );
         createResponse(res, HttpStatus.OK, "Students count in university", {
             count,

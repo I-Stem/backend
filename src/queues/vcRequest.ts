@@ -16,6 +16,7 @@ import MessageModel, { MessageLabel } from '../domain/MessageModel';
 import ExceptionMessageTemplates, { ExceptionTemplateNames } from '../MessageTemplates/ExceptionTemplates';
 import { getFormattedJson } from '../utils/formatter';
 import VcResponseQueue from './VcResponse';
+import { DocType } from '../domain/AfcModel';
 
 class VcRequestQueue {
     static servicename = 'VCRequestQueue';
@@ -66,7 +67,7 @@ class VcRequestQueue {
             const file = await FileModel.getFileById(vcRequest.inputFileId);
 
             if (file !== null) {
-                if (file.externalVideoId && file.waitingQueue.length === 0) {
+                if (file.externalVideoId && file.ocrWaitingQueue.length === 0) {
                     await vcRequest.changeStatusTo(VCRequestStatus.INDEXING_SKIPPED);
                     VcResponseQueue.dispatch({
     vcRequestId: vcRequest.vcRequestId,
@@ -78,12 +79,12 @@ const result: any = await this.requestVideoInsights(vcRequest, file);
 if (result === null) {
 vcRequest.changeStatusTo(VCRequestStatus.INDEXING_REQUEST_FAILED);
 } else {
-    file.addRequestToWaitingQueue(vcRequest.vcRequestId);
+    file.addRequestToWaitingQueue(vcRequest.vcRequestId, DocType.NONMATH);
     await file.updateVideoId(result.videoId);
 }
 
                 } else {
-                    await file.addRequestToWaitingQueue(vcRequest.vcRequestId);
+                    await file.addRequestToWaitingQueue(vcRequest.vcRequestId, DocType.NONMATH);
                 }
             } else {
                 this.sendAPIFailureAlert(vcRequest, file, 200, 'couldn\'t get input file', 'none');
@@ -103,7 +104,7 @@ vcRequest.changeStatusTo(VCRequestStatus.INDEXING_REQUEST_FAILED);
         logger.info("file age: " + isFileMoreThanHourOld);
 
         if(
-            (file.waitingQueue && file?.waitingQueue?.length === 0)
+            (file.ocrWaitingQueue && file?.ocrWaitingQueue?.length === 0)
             || isFileMoreThanHourOld) {
 logger.info("Video indexing needed");
             return true;

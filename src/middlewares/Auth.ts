@@ -3,13 +3,13 @@
  *
  */
 
-import * as jwt from 'jsonwebtoken';
-import Locals from '../providers/Locals';
-import { Request, Response, Application, NextFunction } from 'express';
-import { createResponse, response } from '../utils/response';
-import * as HttpStatus from 'http-status-codes';
-import loggerFactory from './WinstonLogger';
-import { UniversityRoles } from 'src/domain/UniversityModel';
+import * as jwt from "jsonwebtoken";
+import Locals from "../providers/Locals";
+import { Request, Response, Application, NextFunction } from "express";
+import { response, createResponse } from "../utils/response";
+import * as HttpStatus from "http-status-codes";
+import loggerFactory from "./WinstonLogger";
+import { UniversityRoles } from "../domain/UniversityModel";
 
 class Auth {
     static servicename = 'Auth';
@@ -17,42 +17,37 @@ class Auth {
     public static ACCESS_TOKEN_MISSING_ERROR_MESSAGE: string = `The request is missing access token`;
     public static ACCESS_TOKEN_EXPIRED_ERROR_MESSAGE: string = `The access token has expired`;
 
-    private static AUTH_NOT_REQUIRED_ENDPOINTS = [
-        '/auth',
-        'api/v1/ocr/callback',
-        'api/vc/callback',
-        '/service/email',
-        'api/university/organ/req',
-    ];
+    private static AUTH_NOT_REQUIRED_ENDPOINTS =
+        process.env.EXEMPT_ENDPOINT?.split(",") || [];
 
-    private static AUTHORIZED_ROUTES_FOR_STAFFS = [
-        'api/university/index',
-        'api/university/invite',
-        'api/university/settings',
-        'api/university/metrics',
-    ];
+    private static AUTHORIZED_ROUTES_FOR_STAFFS =
+        process.env.EXEMPT_ENDPOINT_FOR_STAFFS?.split(",") || [];
 
+    /**
+     * Function to verify authorization of API endpoint.
+     * Returns true if the endpoint is not accessible to user.
+     *
+     * @param path API endpoint
+     * @param role User Role
+     */
     private static verifyRouteAuthorization(
-        res: Response,
         path: string,
         role: UniversityRoles
-    ) {
+    ): boolean {
         if (
             Auth.AUTHORIZED_ROUTES_FOR_STAFFS.some(
                 (endpoint) =>
                     path.includes(endpoint) && role !== UniversityRoles.STAFF
             )
         ) {
-            return createResponse(
-                res,
-                HttpStatus.FORBIDDEN,
-                'Unauthorized user'
-            );
+            return true;
         }
+        return false;
     }
 
     public static verifyToken(req: Request, res: Response, next: NextFunction) {
-        let logger = loggerFactory(Auth.servicename, 'verifyToken');
+        let logger = loggerFactory(Auth.servicename, "verifyToken");
+
         if (
             Auth.AUTH_NOT_REQUIRED_ENDPOINTS.some((endpoint) =>
                 req.path.includes(endpoint)
@@ -100,8 +95,15 @@ class Auth {
                     }
                 }
                 res.locals.user = decoded; // If no error, token info is returned in 'decoded'
-                Auth.verifyRouteAuthorization(res, req.path, decoded.role);
-                next();
+                if (Auth.verifyRouteAuthorization(req.path, decoded.role)) {
+                    return createResponse(
+                        res,
+                        HttpStatus.FORBIDDEN,
+                        "Unauthorized user"
+                    );
+                } else {
+                    next();
+                }
             }
         );
     }

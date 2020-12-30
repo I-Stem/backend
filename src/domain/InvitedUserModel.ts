@@ -85,17 +85,22 @@ class InvitedUserModel {
     }
 
     static async checkInvitedUser(email: string, verifyToken: string) {
+        const logger = loggerFactory(InvitedUserModel.servicename, "checkInvitedUser");
         let valid = false;
-        await InvitedUserDbModel.findOne({ email })
-            .exec()
-            .then((user) => {
+        try {
+        const user = await InvitedUserDbModel.findOne({ email }).lean();
+
                 if (
                     user?.verifyToken === verifyToken &&
                     user.isRegistered === false
                 ) {
+                    logger.info("valid invited user: " + email);
                     valid = true;
                 }
-            });
+            }
+            catch (error) {
+                logger.error("error: %o", error);
+            }
         return valid;
     }
 

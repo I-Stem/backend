@@ -1,16 +1,16 @@
-import FileDbModel from '../models/File';
-import { plainToClass } from 'class-transformer';
-import loggerFactory from '../middlewares/WinstonLogger';
-import { VCRequestStatus, VideoExtractionType } from './VcModel';
-import emailService from '../services/EmailService';
-import MessageModel, { MessageLabel } from './MessageModel';
+import FileDbModel from "../models/File";
+import { plainToClass } from "class-transformer";
+import loggerFactory from "../middlewares/WinstonLogger";
+import { VCRequestStatus, VideoExtractionType } from "./VcModel";
+import emailService from "../services/EmailService";
+import MessageModel, { MessageLabel } from "./MessageModel";
 import ExceptionMessageTemplates, {
-    ExceptionTemplateNames
-} from '../MessageTemplates/ExceptionTemplates';
-import AfcModel, { AFCRequestStatus, DocType } from './AfcModel';
-import UserModel from './User';
-import { saveOCRjson } from '../utils/file';
-import mongoose from 'src/providers/Database';
+    ExceptionTemplateNames,
+} from "../MessageTemplates/ExceptionTemplates";
+import AfcModel, { AFCRequestStatus, DocType } from "./AfcModel";
+import UserModel from "./user/User";
+import { saveOCRjson } from "../utils/file";
+import mongoose from "src/providers/Database";
 
 export interface IFileModel {
     fileId?: string;
@@ -25,11 +25,12 @@ export interface IFileModel {
     OCRVersion?: string;
     videoLength?: number; // in seconds
     externalVideoId?: string;
-    waitingQueue?: string[];
+    ocrWaitingQueue?: string[];
     outputFiles?: object;
     createdAt?: Date;
     ocrFileURL?: string;
     mathOcrFileUrl?: string;
+    mathOcrWaitingQueue: string[];
 }
 
 class FileModel implements IFileModel {
@@ -45,12 +46,13 @@ class FileModel implements IFileModel {
     pages?: number;
     videoLength?: number;
     externalVideoId?: string;
-    waitingQueue: string[] = [];
-    OCRVersion = ' ';
+    ocrWaitingQueue: string[] = [];
+    OCRVersion = " ";
     ocrFileURL: string;
     outputFiles: Map<string, string> = new Map();
     createdAt: Date;
     mathOcrFileUrl?: string;
+    mathOcrWaitingQueue: string[];
 
     constructor(props: IFileModel) {
         this.fileId = props.fileId || props._id || '';
@@ -63,39 +65,70 @@ class FileModel implements IFileModel {
         this.pages = props.pages;
         this.videoLength = props.videoLength;
         this.externalVideoId = props.externalVideoId;
-        this.OCRVersion = props.OCRVersion || '';
-        this.waitingQueue = props.waitingQueue || [];
+        this.OCRVersion = props.OCRVersion || "";
+        this.ocrWaitingQueue = props.ocrWaitingQueue || [];
         this.outputFiles = new Map(Object.entries(props.outputFiles || {}));
         this.createdAt = props.createdAt || new Date();
-        this.ocrFileURL = props.ocrFileURL || '';
-        this.mathOcrFileUrl = props.mathOcrFileUrl || '';
+        this.ocrFileURL = props.ocrFileURL || "";
+        this.mathOcrFileUrl = props.mathOcrFileUrl || "";
+        this.mathOcrWaitingQueue = props.mathOcrWaitingQueue;
     }
 
-    public async addRequestToWaitingQueue(requestId: string) {
+    /**
+     * Returns true if the Doc Type is Math
+     * @param docType
+     */
+    public static isMathDocType(docType: DocType) {
+        if (docType === DocType.MATH) {
+            return true;
+        }
+        return false;
+    }
+
+    public async addRequestToWaitingQueue(requestId: string, docType: DocType) {
         const logger = loggerFactory(
             FileModel.serviceName,
             'addRequestToWaitingQueue'
         );
-        logger.info('adding request to waiting queue: ' + requestId);
-        this.waitingQueue.push(requestId);
-        FileDbModel.findOneAndUpdate(
-            { hash: this.hash },
-            {
-                $push: { waitingQueue: requestId }
-            }
-        ).exec();
+        logger.info(
+            "adding request to waiting queue: " + requestId + " " + docType
+        );
+        if (FileModel.isMathDocType(docType)) {
+            this.mathOcrWaitingQueue.push(requestId);
+            await FileDbModel.findOneAndUpdate(
+                { hash: this.hash },
+                {
+                    $push: { mathOcrWaitingQueue: requestId },
+                }
+            ).exec();
+        } else {
+            this.ocrWaitingQueue.push(requestId);
+            await FileDbModel.findOneAndUpdate(
+                { hash: this.hash },
+                {
+                    $push: { ocrWaitingQueue: requestId },
+                }
+            ).exec();
+        }
     }
 
-    public async clearWaitingQueue() {
+    public async clearWaitingQueue(docType: DocType) {
         const logger = loggerFactory(
             FileModel.serviceName,
             'clearWaitingQueue'
         );
-        logger.info('clearing the waiting queue');
-        this.waitingQueue.splice(0, this.waitingQueue.length);
-        await FileDbModel.findByIdAndUpdate(this.fileId, {
-            waitingQueue: []
-        }).exec();
+        logger.info("clearing the waiting queue");
+        if (FileModel.isMathDocType(docType)) {
+            this.mathOcrWaitingQueue.splice(0, this.mathOcrWaitingQueue.length);
+            await FileDbModel.findByIdAndUpdate(this.fileId, {
+                mathOcrWaitingQueue: [],
+            }).exec();
+        } else {
+            this.ocrWaitingQueue.splice(0, this.ocrWaitingQueue.length);
+            await FileDbModel.findByIdAndUpdate(this.fileId, {
+                ocrWaitingQueue: [],
+            }).exec();
+        }
     }
 
     public async updateOCRVersion(OCRVersion: string) {
@@ -107,34 +140,39 @@ class FileModel implements IFileModel {
         }).exec();
     }
 
-    public async updateOCRResults(hash: string, json: any, pages: number, docType: string) {
-        const logger = loggerFactory(FileModel.serviceName, 'updateOCRResults');
+    public async updateOCRResults(
+        hash: string,
+        json: any,
+        pages: number,
+        docType: DocType
+    ) {
+        const logger = loggerFactory(FileModel.serviceName, "updateOCRResults");
         try {
-            let fileName = 'ocr-json.json';
-            if(docType === DocType.MATH){
-                fileName = 'math-ocr-json.json';
+            let fileName = "ocr-json.json";
+            if (docType === DocType.MATH) {
+                fileName = "math-ocr-json.json";
             }
             const url = await saveOCRjson(json, hash, fileName);
             logger.info(`The doctype: ${docType}`);
-            if(docType === DocType.NONMATH) {
+            if (!FileModel.isMathDocType(docType)) {
                 await FileDbModel.findOneAndUpdate(
                     { hash: hash },
                     {
                         pages: pages,
-                        ocrFileURL: url
+                        ocrFileURL: url,
                     }
                 ).lean();
-            } else{
+            } else {
                 await FileDbModel.findOneAndUpdate(
                     { hash: hash },
                     {
                         pages: pages,
-                        mathOcrFileUrl: url
+                        mathOcrFileUrl: url,
                     }
                 ).lean();
             }
         } catch (err) {
-            logger.error('error occured' + err);
+            logger.error("error occured" + err);
         }
     }
 
@@ -225,20 +263,28 @@ class FileModel implements IFileModel {
         return null;
     }
 
-    public static afcInputFileHandler(afc: (AfcModel & mongoose.Document)) {
+    public static afcInputFileHandler(afc: AfcModel & mongoose.Document) {
         const logger = loggerFactory(
             FileModel.serviceName,
-            'afcInputFileHandler'
+            "afcInputFileHandler"
         );
         FileDbModel.findById(afc.inputFileId)
             .exec()
             .then(async (file) => {
-                if (!file?.json) {
-                    const index = file?.waitingQueue.indexOf(afc?._id);
+                if (!file?.mathOcrFileUrl || !file.ocrFileURL) {
+                    let index;
+                    if (FileModel.isMathDocType(afc.docType)) {
+                        index = file?.mathOcrWaitingQueue.indexOf(afc?._id);
+                    } else {
+                        index = file?.ocrWaitingQueue.indexOf(afc?._id);
+                    }
                     if (index! > -1) {
-                        file?.waitingQueue.splice(index!, 1);
-                        afc.status = AFCRequestStatus.OCR_FAILED;
-                        await afc?.save();
+                        if (FileModel.isMathDocType(afc.docType)) {
+                            file?.mathOcrWaitingQueue.splice(index!, 1);
+                        } else {
+                            file?.ocrWaitingQueue.splice(index!, 1);
+                        }
+                        afc.changeStatusTo(AFCRequestStatus.OCR_FAILED);
                         await file?.save();
                         const user = await UserModel.getUserById(afc?.userId);
                         if (user) {
@@ -247,7 +293,7 @@ class FileModel implements IFileModel {
                                 ExceptionMessageTemplates.getAFCFailureMessageForUser(
                                     {
                                         documentName: afc.documentName,
-                                        user: user.fullname
+                                        user: user.fullname,
                                     }
                                 )
                             );

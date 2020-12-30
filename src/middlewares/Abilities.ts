@@ -1,5 +1,5 @@
 import { Ability, AbilityBuilder, MongoQuery } from "@casl/ability";
-import { OtherUserRoles } from "src/domain/User";
+import { OtherUserRoles } from "src/domain/user";
 import { UniversityRoles } from "../domain/UniversityModel";
 import { ServiceRoleEnum, UserRoleEnum } from "../models/User";
 

@@ -9,6 +9,8 @@ import { getFormattedJson } from '../utils/formatter';
 import EmailService from '../services/EmailService';
 import ExceptionMessageTemplates from '../MessageTemplates/ExceptionTemplates';
 import * as pdfJS from 'pdfjs-dist/es5/build/pdf';
+import emailService from '../services/EmailService';
+import UserModel from './user/User';
 
 export const enum AFCRequestStatus {
     REQUEST_INITIATED = 'REQUEST_INITIATED',
@@ -23,6 +25,7 @@ export const enum AFCRequestStatus {
     FORMATTING_FAILED = 'FORMATTING_FAILED',
     ESCALATION_REQUESTED = 'ESCALATION_REQUESTED',
     ESCALATION_RESOLVED = 'ESCALATION_RESOLVED',
+    RETRY_REQUESTED = 'RETRY_REQUESTED',
 }
 
 export class AFCRequestLifecycleEvent {
@@ -329,6 +332,66 @@ class AfcModel implements AFCRequestProps {
             creationTime + Math.ceil(pageNumber / 100) * 1000 * 60 * 60
         );
         await AfcDbModel.findByIdAndUpdate(afcId, {expiryTime});
+    }
+
+    public static async updateAfcPageCount(
+        afcId: string,
+        filePath: string
+    ): Promise<any> {
+        const logger = loggerFactory(
+            AfcModel.serviceName,
+            'updateAfcPageCount'
+        );
+        let pageCount = 0;
+        let creationTime = 0;
+        logger.info(`AFC REQUEST ID: ${afcId}`);
+        const extension = filePath.split('.').pop()?.toUpperCase();
+        logger.info(`EXTENSION FOR FILE: ${extension}`);
+        if (extension === AFCRequestOutputFormat.PDF) {
+            logger.info('url: ', filePath);
+            pdfJS.getDocument({ url: filePath }).promise.then(
+                async function (doc) {
+                    const numPages = doc.numPages;
+                    logger.info('# Document Loaded');
+                    logger.info('Number of Pages: ' + numPages);
+                    const afc = await AfcDbModel.findByIdAndUpdate(
+                        afcId,
+                        {
+                            pageCount: numPages
+                        },
+                        { new: true }
+                    ).lean();
+                    pageCount = afc?.pageCount || 0;
+                    creationTime = new Date((afc as unknown as any).createdAt).getTime();
+                    await AfcModel.setExpiryTime(afc?._id, creationTime, pageCount);
+                },
+                function (err) {
+                    logger.error('Error', err);
+                }
+            );
+        } else {
+            const afc = await AfcDbModel.findByIdAndUpdate(
+                afcId,
+                {
+                    pageCount: 1
+                },
+                { new: true }
+            ).lean();
+            pageCount = afc?.pageCount || 0;
+        }
+        return pageCount;
+    }
+
+    public static sendAfcFailureMessageToUser(user: UserModel, afcRequest: AfcModel){
+        emailService.sendEmailToUser(
+            user,
+            ExceptionMessageTemplates.getFailureMessageForUser(
+                {
+                    user,
+                    data: afcRequest
+                }
+            )
+        );
     }
 
     public static async updateAfcPageCount(

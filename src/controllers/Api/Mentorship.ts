@@ -12,7 +12,7 @@ import { plainToClass } from "class-transformer";
 import emailService from "../../services/EmailService";
 import MentorshipTemplate from "../../MessageTemplates/MentorshipTemplate";
 import { getFormattedJson } from "../../utils/formatter";
-import UserModel from "../../domain/User";
+import UserModel from "../../domain/user/User";
 
 class MentorshipController {
     static ServiceName = "MentorshipController";

@@ -16,4 +16,6 @@ router.post(
         JobPreferencesController.addJobPreference(req, res);
     }
 );
+router.get("/:userId", JobPreferencesController.getJobPreference);
+
 export default router;

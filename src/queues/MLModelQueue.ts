@@ -8,7 +8,7 @@ import ExceptionMessageTemplates from '../MessageTemplates/ExceptionTemplates';
 import emailService from '../services/EmailService';
 import afcRequest from './afcRequest';
 import ServiceRequestTemplates from '../MessageTemplates/ServiceRequestTemplates';
-import UserModel from '../domain/User';
+import UserModel from '../domain/user/User';
 
 class MLModelQueue {
     public queue: any;

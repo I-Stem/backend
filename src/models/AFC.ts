@@ -3,14 +3,18 @@
  *
  */
 
-import { IAFC } from '../interfaces/models/afc';
-import mongoose from 'mongoose';
+import { IAFC } from "../interfaces/models/afc";
+import mongoose from "mongoose";
 
-import ReviewSchema from './Review';
-import AfcModel, { AFCRequestOutputFormat, AFCRequestStatus, DocType } from '../domain/AfcModel';
-import { string } from '@hapi/joi';
+import ReviewSchema from "./Review";
+import AfcModel, {
+    AFCRequestOutputFormat,
+    AFCRequestStatus,
+    DocType,
+} from "../domain/AfcModel";
+import { string } from "@hapi/joi";
 
-const mongooseFuzzySearching = require('mongoose-fuzzy-searching');
+const mongooseFuzzySearching = require("mongoose-fuzzy-searching");
 
 /*
 export interface IAFCModel extends mongoose.Model<mongoose.Document, AfcModel> {
@@ -37,43 +41,58 @@ const allowedAFCRequestStatuses = [
 export const AFCSchema = new mongoose.Schema(
     {
         // correlationId: { type: String },
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        triggeredBy: {type: String, enum: ['user', 'vc_model'], required: true},
-        triggeringCaseId: {type: mongoose.Schema.Types.ObjectId, ref: 'MlModel'},
-        inputFileId: { type: mongoose.Schema.Types.ObjectId, ref: 'File' },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        triggeredBy: {
+            type: String,
+            enum: ["user", "vc_model"],
+            required: true,
+        },
+        triggeringCaseId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "MlModel",
+        },
+        inputFileId: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
         outputURL: { type: String },
         documentName: { type: String },
         pageCount: { type: Number },
-        docType: {type:String, enum: ['MATH', 'NONMATH']},
+        docType: { type: String, enum: ["MATH", "NONMATH"] },
         status: {
             type: String,
-enum: allowedAFCRequestStatuses,
-            index: true
+            enum: allowedAFCRequestStatuses,
+            index: true,
         },
-        statusLog: [{
-            status: {
+        statusLog: [
+            {
+                status: {
                     type: String,
-enum: allowedAFCRequestStatuses,
-                    index: true
+                    enum: allowedAFCRequestStatuses,
+                    index: true,
+                },
+                actionAt: Date,
             },
-            actionAt: Date
-        }],
+        ],
         outputFormat: {
             type: String,
-            enum: [AFCRequestOutputFormat.WORD, AFCRequestOutputFormat.HTML, AFCRequestOutputFormat.PDF, AFCRequestOutputFormat.MP3, AFCRequestOutputFormat.TEXT],
-            index: true
+            enum: [
+                AFCRequestOutputFormat.WORD,
+                AFCRequestOutputFormat.HTML,
+                AFCRequestOutputFormat.PDF,
+                AFCRequestOutputFormat.MP3,
+                AFCRequestOutputFormat.TEXT,
+            ],
+            index: true,
         }, // 1 - word, 2 - xhtml, 3 - text, 4 - pdf, 5 - mp3
-        tag: { type: String, index : true},
+        tag: { type: String, index: true },
         escalatedPageRange: { type: String },
         review: ReviewSchema,
         reviews: [ReviewSchema],
         inputFileLink: { type: String },
-        expiryTime: {type: Date}
+        expiryTime: { type: Date },
     },
     {
         toJSON: { virtuals: true, getters: true },
         toObject: { virtuals: true, getters: true },
-        timestamps: true
+        timestamps: true,
     }
 );
 
@@ -94,8 +113,8 @@ AFCSchema.pre(`findOneAndUpdate`, function(_next) {
 });
 */
 
-AFCSchema.plugin(mongooseFuzzySearching, { fields : ['documentName']});
+AFCSchema.plugin(mongooseFuzzySearching, { fields: ["documentName", "tag"] });
 
-const AFC = mongoose.model<AfcModel & mongoose.Document>('AFC', AFCSchema);
+const AFC = mongoose.model<AfcModel & mongoose.Document>("AFC", AFCSchema);
 
 export default AFC;

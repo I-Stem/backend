@@ -1,5 +1,5 @@
 import loggerFactory from '../middlewares/WinstonLogger';
-import UserModel from './User';
+import UserModel from './user/User';
 import Ledger from '../models/Ledger';
 
 class LedgerModel extends Ledger {

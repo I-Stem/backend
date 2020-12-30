@@ -9,7 +9,7 @@ import * as HttpStatus from 'http-status-codes';
 import { Request, Response } from 'express';
 import loggerFactory from '../../../middlewares/WinstonLogger';
 import Locals from '../../../providers/Locals';
-import UserModel from '../../../domain/User';
+import UserModel from '../../../domain/user/User';
 
 class VerifyController {
     static servicename = 'VerifyController';

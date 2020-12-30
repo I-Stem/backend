@@ -1,6 +1,6 @@
 import MessageModel, { MessageLabel } from '../domain/MessageModel';
 import MLModelModel from '../domain/MLModelModel';
-import UserModel from '../domain/User';
+import UserModel from '../domain/user/User';
 
 export enum ServiceRequestStatusTemplateNames {
     CUSTOM_MODEL_TRAINING_COMPLETE = 'custom_model_training_complete',

@@ -8,7 +8,7 @@ import { createResponse, response } from '../../utils/response';
 import * as HttpStatus from 'http-status-codes';
 import Tag, { ITagModel } from '../../models/Tag';
 import loggerFactory from '../../middlewares/WinstonLogger';
-import UserModel from '../../domain/User';
+import UserModel from '../../domain/user/User';
 
 class TagController {
     static servicename = 'Tag Controller';

@@ -5,7 +5,7 @@
 
 import { UniversityRoles } from "../../domain/UniversityModel";
 import { ServiceRoleEnum, UserRoleEnum } from "../../../src/models/User";
-import {OtherUserRoles, UserType} from "../../domain/User";
+import {OAuthProvider, OtherUserRoles, UserType} from "../../domain/user";
 
 
 export interface Tokens {
@@ -34,12 +34,6 @@ export interface IUser {
 
     passwordResetToken?: string;
     passwordResetExpires: Date;
-    facebook?: string;
-    twitter?: string;
-    google?: string;
-    github?: string;
-    instagram?: string;
-    linkedin?: string;
 
     geolocation?: string;
     website?: string;
@@ -47,7 +41,6 @@ export interface IUser {
 
     organizationName?: string;
     organisationAddress?: string;
-    noStudentsWithDisability?: string;
     role: UserRoleEnum | UniversityRoles | OtherUserRoles;
     accessRequestSent?: boolean;
     statusLog?: Status[];
@@ -55,6 +48,8 @@ export interface IUser {
     deductCredits(amount: number, reason: string): void;
     rollNumber?: string;
     serviceRole: ServiceRoleEnum;
+    oauthProvider: OAuthProvider;
+    oauthProviderId: string;
     //    generateResetExpiryDate(): Date;
     // generateResetToken(_passwordResetExpires: Date): string;
 }
