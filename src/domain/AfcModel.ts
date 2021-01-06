@@ -324,19 +324,28 @@ class AfcModel implements AFCRequestProps {
             );
     }
 
+    public static async setExpiryTime(afcId: string, creationTime: number, pageNumber: number) {
+        const expiryTime = new Date(
+            creationTime + Math.ceil(pageNumber / 100) * 1000 * 60 * 60
+        );
+        await AfcDbModel.findByIdAndUpdate(afcId, {expiryTime});
+    }
+
     public static async updateAfcPageCount(
         afcId: string,
-        filePath: string,
+        filePath: string
     ): Promise<any> {
         const logger = loggerFactory(
             AfcModel.serviceName,
             'updateAfcPageCount'
         );
         let pageCount = 0;
+        let creationTime = 0;
         logger.info(`AFC REQUEST ID: ${afcId}`);
         const extension = filePath.split('.').pop();
         logger.info(`EXTENSION FOR FILE: ${extension}`);
         if (extension === 'pdf') {
+            console.log('url: ', filePath);
             pdfJS.getDocument({ url: filePath }).promise.then(
                 async function (doc) {
                     const numPages = doc.numPages;
@@ -350,6 +359,8 @@ class AfcModel implements AFCRequestProps {
                         { new: true }
                     ).lean();
                     pageCount = afc?.pageCount || 0;
+                    creationTime = new Date((afc as unknown as any).createdAt).getTime();
+                    AfcModel.setExpiryTime(afc?._id, creationTime, pageCount);
                 },
                 function (err) {
                     logger.error('Error', err);

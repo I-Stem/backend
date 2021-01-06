@@ -8,7 +8,7 @@ import loggerFactory from '../middlewares/WinstonLogger';
 import request from 'request-promise-native';
 import * as https from 'https';
 import  AfCResponseQueue  from './afcResponse';
-import AfcModel, { AFCRequestStatus, DocType } from '../domain/AfcModel';
+import AfcModel, { AFCRequestStatus } from '../domain/AfcModel';
 import FileModel from '../domain/FileModel';
 import ExceptionMessageTemplates from '../MessageTemplates/ExceptionTemplates';
 import emailService from '../services/EmailService';

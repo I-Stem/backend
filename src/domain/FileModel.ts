@@ -108,7 +108,6 @@ class FileModel implements IFileModel {
 
     public async updateOCRResults(hash: string, json: any, pages: number) {
         const logger = loggerFactory(FileModel.serviceName, 'updateOCRResults');
-        logger.info(`all details: ${hash}, ${json}, ${pages}`);
         try {
             const url = await saveOCRjson(json, hash, 'ocr-json.json');
             await FileDbModel.findOneAndUpdate(
