@@ -26,7 +26,7 @@ export const FileSchema = new mongoose.Schema(
         waitingQueue: [{ type: mongoose.Schema.Types.ObjectId, ref: ['AFC', 'VideoCaptioning']}],
         OCRVersion: { type: String },
         ocrFileURL: { type: String },
-        docType: {type:String, enum: ['MATH', 'NONMATH']}
+        mathOcrFileUrl: { type: String }
     },
     {
         id: true,

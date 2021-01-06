@@ -133,7 +133,12 @@ public async requestFormatting(afcRequest: AfcModel, file: FileModel): Promise<a
     const logger = loggerFactory(AfcResponseQueue.servicename, 'requestFormatting');
     logger.info('calling formatting API');
     try {
-        const filePath = String(file?.ocrFileURL || '');
+        let filePath = "";
+        if(afcRequest.docType === DocType.NONMATH)
+        { filePath = String(file?.ocrFileURL || '');}
+        else{
+            filePath = String(file?.mathOcrFileUrl || '');
+        }
         const response = await got.get(filePath);
         console.log("Response: ", JSON.parse(response.body));
         const formattingAPIResult = await got.post(`${process.env.SERVICE_API_HOST}/api/v1/ocr/format`, {

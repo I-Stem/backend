@@ -28,7 +28,7 @@ export interface IFileModel {
     outputFiles?: object;
     createdAt?: Date;
     ocrFileURL?: string;
-    docType?: DocType;
+    mathOcrFileUrl?: string;
 }
 
 class FileModel implements IFileModel {
@@ -47,9 +47,9 @@ class FileModel implements IFileModel {
     waitingQueue: string[] = [];
     OCRVersion = ' ';
     ocrFileURL: string;
-    docType: DocType;
     outputFiles: Map<string, string> = new Map();
     createdAt: Date;
+    mathOcrFileUrl?: string;
 
     constructor(props: IFileModel) {
         this.fileId = props.fileId || props._id || '';
@@ -67,7 +67,7 @@ class FileModel implements IFileModel {
         this.outputFiles = new Map(Object.entries(props.outputFiles || {}));
         this.createdAt = props.createdAt || new Date();
         this.ocrFileURL = props.ocrFileURL || '';
-        this.docType = props.docType || DocType.NONMATH;
+        this.mathOcrFileUrl = props.mathOcrFileUrl || '';
     }
 
     public async addRequestToWaitingQueue(requestId: string) {
@@ -106,17 +106,31 @@ class FileModel implements IFileModel {
         }).exec();
     }
 
-    public async updateOCRResults(hash: string, json: any, pages: number) {
+    public async updateOCRResults(hash: string, json: any, pages: number, docType: string) {
         const logger = loggerFactory(FileModel.serviceName, 'updateOCRResults');
         try {
-            const url = await saveOCRjson(json, hash, 'ocr-json.json');
-            await FileDbModel.findOneAndUpdate(
-                { hash: hash },
-                {
-                    pages: pages,
-                    ocrFileURL: url,
-                }
-            ).lean();
+            let fileName = 'ocr-json.json';
+            if(docType === DocType.MATH){
+                fileName = 'math-ocr-json.json';
+            }
+            const url = await saveOCRjson(json, hash, fileName);
+            if(docType === DocType.NONMATH) {
+                await FileDbModel.findOneAndUpdate(
+                    { hash: hash },
+                    {
+                        pages: pages,
+                        ocrFileURL: url
+                    }
+                ).lean();
+            } else{
+                await FileDbModel.findOneAndUpdate(
+                    { hash: hash },
+                    {
+                        pages: pages,
+                        mathOcrFileUrl: url
+                    }
+                ).lean();
+            }
         } catch (err) {
             logger.error('error occured' + err);
         }
@@ -169,7 +183,7 @@ class FileModel implements IFileModel {
 
         return null;
     }
-
+    // Duplicate function **getFileById**
     public static async findFileById(id: string): Promise<FileModel | null> {
         return FileDbModel.findOne({ _id: id }).lean();
     }

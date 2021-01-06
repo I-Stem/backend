@@ -274,13 +274,13 @@ class AfcModel implements AFCRequestProps {
     }
 
     public static afcCronHandler(
-        createdAtHourGTE: string,
-        createdAtHourLTE: string
+        expiryTimeGTE: string,
+        expiryTimeLTE: string
     ): void {
         const logger = loggerFactory(AfcModel.serviceName, 'afcCronHandler');
         const failedRequests: string[] = [];
         AfcDbModel.find({
-            createdAt: { $gte: createdAtHourGTE, $lte: createdAtHourLTE }
+            expiryTime: { $gte: new Date(expiryTimeGTE), $lte: new Date(expiryTimeLTE) }
         })
             .exec()
             .then((afc) => {
@@ -308,7 +308,7 @@ class AfcModel implements AFCRequestProps {
 
                 if (!pendingStatus) {
                     logger.info(
-                        `No failed AFC Request found during cron sweep between ${createdAtHourGTE} and ${createdAtHourLTE}`
+                        `No failed AFC Request found during cron sweep between ${expiryTimeGTE} and ${expiryTimeLTE}`
                     );
                 } else {
                     logger.info('notifying I-Stem for failures');
