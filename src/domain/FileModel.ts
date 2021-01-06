@@ -7,10 +7,9 @@ import MessageModel, { MessageLabel } from './MessageModel';
 import ExceptionMessageTemplates, {
     ExceptionTemplateNames
 } from '../MessageTemplates/ExceptionTemplates';
-import AfcModel, { AFCRequestStatus, DocType } from './AfcModel';
+import { AFCRequestStatus, DocType } from './AfcModel';
 import UserModel from './User';
-import { saveOCRjson } from '../utils/file';
-import mongoose from 'src/providers/Database';
+import { onFileSaveToS3, saveOCRjson } from '../utils/file';
 
 export interface IFileModel {
     fileId?: string;
@@ -29,7 +28,7 @@ export interface IFileModel {
     outputFiles?: object;
     createdAt?: Date;
     ocrFileURL?: string;
-    mathOcrFileUrl?: string;
+    docType?: DocType;
 }
 
 class FileModel implements IFileModel {
@@ -48,9 +47,9 @@ class FileModel implements IFileModel {
     waitingQueue: string[] = [];
     OCRVersion = ' ';
     ocrFileURL: string;
+    docType: DocType;
     outputFiles: Map<string, string> = new Map();
     createdAt: Date;
-    mathOcrFileUrl?: string;
 
     constructor(props: IFileModel) {
         this.fileId = props.fileId || props._id || '';
@@ -68,7 +67,7 @@ class FileModel implements IFileModel {
         this.outputFiles = new Map(Object.entries(props.outputFiles || {}));
         this.createdAt = props.createdAt || new Date();
         this.ocrFileURL = props.ocrFileURL || '';
-        this.mathOcrFileUrl = props.mathOcrFileUrl || '';
+        this.docType = props.docType || DocType.NONMATH;
     }
 
     public async addRequestToWaitingQueue(requestId: string) {
@@ -107,32 +106,18 @@ class FileModel implements IFileModel {
         }).exec();
     }
 
-    public async updateOCRResults(hash: string, json: any, pages: number, docType: string) {
+    public async updateOCRResults(hash: string, json: any, pages: number) {
         const logger = loggerFactory(FileModel.serviceName, 'updateOCRResults');
+        logger.info(`all details: ${hash}, ${json}, ${pages}`);
         try {
-            let fileName = 'ocr-json.json';
-            if(docType === DocType.MATH){
-                fileName = 'math-ocr-json.json';
-            }
-            const url = await saveOCRjson(json, hash, fileName);
-            logger.info(`The doctype: ${docType}`);
-            if(docType === DocType.NONMATH) {
-                await FileDbModel.findOneAndUpdate(
-                    { hash: hash },
-                    {
-                        pages: pages,
-                        ocrFileURL: url
-                    }
-                ).lean();
-            } else{
-                await FileDbModel.findOneAndUpdate(
-                    { hash: hash },
-                    {
-                        pages: pages,
-                        mathOcrFileUrl: url
-                    }
-                ).lean();
-            }
+            const url = await saveOCRjson(json, hash, 'ocr-json.json');
+            await FileDbModel.findOneAndUpdate(
+                { hash: hash },
+                {
+                    pages: pages,
+                    ocrFileURL: url,
+                }
+            ).lean();
         } catch (err) {
             logger.error('error occured' + err);
         }
@@ -225,7 +210,7 @@ class FileModel implements IFileModel {
         return null;
     }
 
-    public static afcInputFileHandler(afc: (AfcModel & mongoose.Document)) {
+    public static afcInputFileHandler(afc: any) {
         const logger = loggerFactory(
             FileModel.serviceName,
             'afcInputFileHandler'
@@ -238,8 +223,8 @@ class FileModel implements IFileModel {
                     if (index! > -1) {
                         file?.waitingQueue.splice(index!, 1);
                         afc.status = AFCRequestStatus.OCR_FAILED;
-                        await afc?.save();
-                        await file?.save();
+                        afc?.save();
+                        file?.save();
                         const user = await UserModel.getUserById(afc?.userId);
                         if (user) {
                             emailService.sendEmailToUser(

@@ -23,7 +23,6 @@ export const enum AFCRequestStatus {
     FORMATTING_FAILED = 'FORMATTING_FAILED',
     ESCALATION_REQUESTED = 'ESCALATION_REQUESTED',
     ESCALATION_RESOLVED = 'ESCALATION_RESOLVED',
-    RETRY_REQUESTED = 'RETRY_REQUESTED',
 }
 
 export class AFCRequestLifecycleEvent {
@@ -275,13 +274,13 @@ class AfcModel implements AFCRequestProps {
     }
 
     public static afcCronHandler(
-        expiryTimeGTE: string,
-        expiryTimeLTE: string
+        createdAtHourGTE: string,
+        createdAtHourLTE: string
     ): void {
         const logger = loggerFactory(AfcModel.serviceName, 'afcCronHandler');
         const failedRequests: string[] = [];
         AfcDbModel.find({
-            expiryTime: { $gte: new Date(expiryTimeGTE), $lte: new Date(expiryTimeLTE) }
+            createdAt: { $gte: createdAtHourGTE, $lte: createdAtHourLTE }
         })
             .exec()
             .then((afc) => {
@@ -309,7 +308,7 @@ class AfcModel implements AFCRequestProps {
 
                 if (!pendingStatus) {
                     logger.info(
-                        `No failed AFC Request found during cron sweep between ${expiryTimeGTE} and ${expiryTimeLTE}`
+                        `No failed AFC Request found during cron sweep between ${createdAtHourGTE} and ${createdAtHourLTE}`
                     );
                 } else {
                     logger.info('notifying I-Stem for failures');
@@ -323,6 +322,50 @@ class AfcModel implements AFCRequestProps {
             .catch((err) =>
                 logger.error(`Error occured in filtering AFC ${err}`)
             );
+    }
+
+    public static async updateAfcPageCount(
+        afcId: string,
+        filePath: string,
+    ): Promise<any> {
+        const logger = loggerFactory(
+            AfcModel.serviceName,
+            'updateAfcPageCount'
+        );
+        let pageCount = 0;
+        logger.info(`AFC REQUEST ID: ${afcId}`);
+        const extension = filePath.split('.').pop();
+        logger.info(`EXTENSION FOR FILE: ${extension}`);
+        if (extension === 'pdf') {
+            pdfJS.getDocument({ url: filePath }).promise.then(
+                async function (doc) {
+                    const numPages = doc.numPages;
+                    logger.info('# Document Loaded');
+                    logger.info('Number of Pages: ' + numPages);
+                    const afc = await AfcDbModel.findByIdAndUpdate(
+                        afcId,
+                        {
+                            pageCount: numPages
+                        },
+                        { new: true }
+                    ).lean();
+                    pageCount = afc?.pageCount || 0;
+                },
+                function (err) {
+                    logger.error('Error', err);
+                }
+            );
+        } else {
+            const afc = await AfcDbModel.findByIdAndUpdate(
+                afcId,
+                {
+                    pageCount: 1
+                },
+                { new: true }
+            ).lean();
+            pageCount = afc?.pageCount || 0;
+        }
+        return pageCount;
     }
 
     public static async setExpiryTime(afcId: string, creationTime: number, pageNumber: number) {
