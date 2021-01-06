@@ -188,6 +188,7 @@ pageRanges: [req.body.escalatedPageRange]
 
         try {
         const file = await FileModel.getFileByHash(req.body.hash);
+        logger.info(`${req.body.hash}, ${req.body.json}, ${req.body.pages}, ${req.body.docType}`);
         if (!file?.ocrFileURL || !file.mathOcrFileUrl)
         {
             await file?.updateOCRResults(req.body.hash, req.body.json, req.body.pages, req.body.docType);

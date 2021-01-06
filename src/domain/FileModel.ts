@@ -114,6 +114,7 @@ class FileModel implements IFileModel {
                 fileName = 'math-ocr-json.json';
             }
             const url = await saveOCRjson(json, hash, fileName);
+            logger.info(`The doctype: ${docType}`);
             if(docType === DocType.NONMATH) {
                 await FileDbModel.findOneAndUpdate(
                     { hash: hash },
