@@ -87,8 +87,8 @@ class AfcRequestQueue {
             logger.info("couldn't file by id");
             throw Error("no file with such id")
         }
-        if (!file?.ocrFileURL || file?.OCRVersion !== process.env.OCR_VERSION) { // OCR is not completed or version change
-                  logger.info('OCR is pending');
+        if (!file?.ocrFileURL || !file.mathOcrFileUrl || file?.OCRVersion !== process.env.OCR_VERSION) { // OCR is not completed or version change
+                  logger.info('OCR is pending or JSON url is not present');
                   logger.info(`Current OCR Version: ${file?.OCRVersion} New OCR Version: ${process.env.OCR_VERSION}`);
                   file?.updateOCRVersion(process.env.OCR_VERSION || '');
                   if (this.isOCRRequired(file)) {
