@@ -342,10 +342,10 @@ class AfcModel implements AFCRequestProps {
         let pageCount = 0;
         let creationTime = 0;
         logger.info(`AFC REQUEST ID: ${afcId}`);
-        const extension = filePath.split('.').pop();
+        const extension = filePath.split('.').pop()?.toUpperCase();
         logger.info(`EXTENSION FOR FILE: ${extension}`);
-        if (extension === 'pdf') {
-            console.log('url: ', filePath);
+        if (extension === AFCRequestOutputFormat.PDF) {
+            logger.info('url: ', filePath);
             pdfJS.getDocument({ url: filePath }).promise.then(
                 async function (doc) {
                     const numPages = doc.numPages;
@@ -360,7 +360,7 @@ class AfcModel implements AFCRequestProps {
                     ).lean();
                     pageCount = afc?.pageCount || 0;
                     creationTime = new Date((afc as unknown as any).createdAt).getTime();
-                    AfcModel.setExpiryTime(afc?._id, creationTime, pageCount);
+                    await AfcModel.setExpiryTime(afc?._id, creationTime, pageCount);
                 },
                 function (err) {
                     logger.error('Error', err);

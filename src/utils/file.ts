@@ -2,6 +2,7 @@
 import S3 from "aws-sdk/clients/s3";
 import * as fs from "fs";
 import { Request, Response, NextFunction } from "express";
+import loggerFactory from '../middlewares/WinstonLogger';
 
 let pkgcloud = require("pkgcloud"); // a cloud API standard library: https://github.com/nodejitsu/pkgcloud
 let s3client = pkgcloud.storage.createClient({
@@ -26,6 +27,8 @@ const uploadFileToS3Bucket = (hash, filename, file) => {
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
         region: process.env.AWS_REGION,
     });
+    const logger = loggerFactory(fileName, "uploadFileToS3Bucket");
+    logger.info("Uploading OCR JSON to S3 bucket.......");
     const upload = s3.upload(
         {
             Bucket: process.env.AWS_BUCKET_NAME || "",
@@ -34,19 +37,22 @@ const uploadFileToS3Bucket = (hash, filename, file) => {
             ContentType: "application/json",
         },
         function (err, data) {
-            console.log(JSON.stringify(err) + " " + JSON.stringify(data));
+            if (err) {
+                logger.error(`Error uplaoding file to S3: ${JSON.stringify(err)}`);
+            }
         }
     );
     return upload.promise();
 };
 
 export async function saveOCRjson(file: any, hash: string, filename: string) {
+    const logger = loggerFactory(fileName, "saveOCRjson");
     try {
         const upload = await uploadFileToS3Bucket(hash, filename, file);
-        console.log(`S3 upload completed, ${upload.Location}`);
+        logger.info(`S3 upload completed, ${upload.Location}`);
         return upload.Location;
     } catch (err) {
-        console.log(`error during file upload ${err}`);
+        logger.info(`error during file upload ${err}`);
     }
 }
 

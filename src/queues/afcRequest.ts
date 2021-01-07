@@ -8,7 +8,7 @@ import loggerFactory from '../middlewares/WinstonLogger';
 import request from 'request-promise-native';
 import * as https from 'https';
 import  AfCResponseQueue  from './afcResponse';
-import AfcModel, { AFCRequestStatus } from '../domain/AfcModel';
+import AfcModel, { AFCRequestStatus, DocType } from '../domain/AfcModel';
 import FileModel from '../domain/FileModel';
 import ExceptionMessageTemplates from '../MessageTemplates/ExceptionTemplates';
 import emailService from '../services/EmailService';
@@ -87,7 +87,7 @@ class AfcRequestQueue {
             logger.info("couldn't file by id");
             throw Error("no file with such id")
         }
-        if (!file?.ocrFileURL || !file.mathOcrFileUrl || file?.OCRVersion !== process.env.OCR_VERSION) { // OCR is not completed or version change
+        if (this.isOCRRequiredForDocType(afcRequest.docType, file) || file?.OCRVersion !== process.env.OCR_VERSION) { // OCR is not completed or version change
                   logger.info('OCR is pending or JSON url is not present');
                   logger.info(`Current OCR Version: ${file?.OCRVersion} New OCR Version: ${process.env.OCR_VERSION}`);
                   file?.updateOCRVersion(process.env.OCR_VERSION || '');

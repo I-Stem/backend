@@ -188,7 +188,7 @@ pageRanges: [req.body.escalatedPageRange]
 
         try {
         const file = await FileModel.getFileByHash(req.body.hash);
-        logger.info(`${req.body.hash}, ${req.body.json}, ${req.body.pages}, ${req.body.docType}`);
+        logger.info(`${req.body.hash}, ${req.body.pages}, ${req.body.docType}`);
         if (req.body.json?.error || (Object.keys(req.body.json).length <= 1 && req.body.json['0'].length === 0)) {
 
     emailService.sendInternalDiagnosticEmail(ExceptionTemplates.getOCRExceptionMessage({
@@ -207,7 +207,7 @@ pageRanges: [req.body.escalatedPageRange]
         await new FileModel(file).clearWaitingQueue();
     return createResponse(res, HttpStatus.OK, 'callback received');
 }
-        if (!file?.ocrFileURL || !file.mathOcrFileUrl || file.OCRVersion !== process.env.OCR_VERSION) {
+        if (!file?.ocrFileURL || !file?.mathOcrFileUrl || file?.OCRVersion !== process.env.OCR_VERSION) {
         await file?.updateOCRResults(req.body.hash, req.body.json, req.body.pages, req.body.docType);
         }
 

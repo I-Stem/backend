@@ -140,7 +140,6 @@ public async requestFormatting(afcRequest: AfcModel, file: FileModel): Promise<a
             filePath = String(file?.mathOcrFileUrl || '');
         }
         const response = await got.get(filePath);
-        console.log("Response: ", JSON.parse(response.body));
         const formattingAPIResult = await got.post(`${process.env.SERVICE_API_HOST}/api/v1/ocr/format`, {
                 json: {
                     json: JSON.parse(response.body),
