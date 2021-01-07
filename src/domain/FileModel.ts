@@ -7,9 +7,10 @@ import MessageModel, { MessageLabel } from './MessageModel';
 import ExceptionMessageTemplates, {
     ExceptionTemplateNames
 } from '../MessageTemplates/ExceptionTemplates';
-import { AFCRequestStatus, DocType } from './AfcModel';
+import AfcModel, { AFCRequestStatus, DocType } from './AfcModel';
 import UserModel from './User';
-import { onFileSaveToS3, saveOCRjson } from '../utils/file';
+import { saveOCRjson } from '../utils/file';
+import mongoose from 'src/providers/Database';
 
 export interface IFileModel {
     fileId?: string;
@@ -224,7 +225,7 @@ class FileModel implements IFileModel {
         return null;
     }
 
-    public static afcInputFileHandler(afc: any) {
+    public static afcInputFileHandler(afc: (AfcModel & mongoose.Document)) {
         const logger = loggerFactory(
             FileModel.serviceName,
             'afcInputFileHandler'
@@ -237,8 +238,8 @@ class FileModel implements IFileModel {
                     if (index! > -1) {
                         file?.waitingQueue.splice(index!, 1);
                         afc.status = AFCRequestStatus.OCR_FAILED;
-                        afc?.save();
-                        file?.save();
+                        await afc?.save();
+                        await file?.save();
                         const user = await UserModel.getUserById(afc?.userId);
                         if (user) {
                             emailService.sendEmailToUser(
