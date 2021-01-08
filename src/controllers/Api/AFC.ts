@@ -207,9 +207,7 @@ pageRanges: [req.body.escalatedPageRange]
         await new FileModel(file).clearWaitingQueue();
     return createResponse(res, HttpStatus.OK, 'callback received');
 }
-        if (!file?.ocrFileURL || !file?.mathOcrFileUrl || file?.OCRVersion !== process.env.OCR_VERSION) {
         await file?.updateOCRResults(req.body.hash, req.body.json, req.body.pages, req.body.docType);
-        }
 
         file?.waitingQueue.forEach(afcRequestId => {
     AfcResponseQueue.dispatch({
