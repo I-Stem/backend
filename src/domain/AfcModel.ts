@@ -35,21 +35,12 @@ export class AFCRequestLifecycleEvent {
     }
 }
 
-<<<<<<< HEAD
-export enum AFCRequestOutputFormat {
-    PDF="PDF",
-    TEXT = "TXT",
-    WORD="DOCX",
-    MP3 = "MP3",
-    HTML="HTML"
-=======
 export const enum AFCRequestOutputFormat {
     PDF = 'PDF',
     TEXT = 'TXT',
     WORD = 'DOCX',
     MP3 = 'MP3',
     HTML = 'HTML',
->>>>>>> e02d862... -- Squash commits --
 }
 
 export enum AFCTriggerer {
@@ -60,11 +51,6 @@ export enum DocType {
     MATH = 'MATH',
     NONMATH = 'NONMATH',
 }
-export enum DocType {
-    MATH = "MATH",
-    NONMATH = "NONMATH"
-}
-
 export interface AFCRequestProps {
     _id?: string;
     afcRequestId?: string;
@@ -104,33 +90,10 @@ class AfcModel implements AFCRequestProps {
     tag?: string;
     escalatedId?: string;
     reviews?: ReviewModel[] = [];
-<<<<<<< HEAD
-triggeredBy: AFCTriggerer = AFCTriggerer.USER;
-triggeringCaseId?: string;
-
-constructor(props: AFCRequestProps) {
-    this.afcRequestId = props.afcRequestId || props._id || '';
-    this.inputFileId = props.inputFileId;
-    this.outputFormat = props.outputFormat;
-    this.outputURL = props.outputURL;
-    this.userId = props.userId;
-    this.documentName = props.documentName;
-    this.triggeredBy = props.triggeredBy;
-    this.triggeringCaseId = props.triggeringCaseId;
-    this.status = props.status || AFCRequestStatus.REQUEST_INITIATED;
-    this.statusLog = props.statusLog || [];
-    this.pageCount = props.pageCount;
-    this.docType = props.docType;
-    this.tag = props.tag;
-    this.escalatedId = props.escalatedId;
-    this.reviews = props.reviews;
-}
-=======
     triggeredBy: AFCTriggerer = AFCTriggerer.USER;
     triggeringCaseId?: string;
     inputFileLink?: string;
     expiryTime?: Date;
->>>>>>> e02d862... -- Squash commits --
 
     constructor(props: AFCRequestProps) {
         this.afcRequestId = props.afcRequestId || props._id || '';
@@ -416,47 +379,6 @@ constructor(props: AFCRequestProps) {
         return pageCount;
     }
 
-    public static afcCronHandler(createdAtHourGTE: string, createdAtHourLTE: string): void{
-        const logger = loggerFactory(AfcModel.serviceName, 'afcCronHandler');
-        const failedRequests:string[] = [];
-        AfcDbModel.find({ createdAt: { $gte: createdAtHourGTE, $lte: createdAtHourLTE } })
-                    .exec()
-                    .then((afc) => {
-                        const status = [
-                            AFCRequestStatus.REQUEST_INITIATED,
-                            AFCRequestStatus.OCR_REQUESTED,
-                            AFCRequestStatus.OCR_REQUEST_ACCEPTED,
-                            AFCRequestStatus.OCR_COMPLETED,
-                            AFCRequestStatus.OCR_SKIPPED,
-                            AFCRequestStatus.FORMATTING_REQUESTED,
-                        ];
-                        let pendingStatus = false;
-
-                        if (afc) {
-                            afc.forEach((afcReq) => {
-                                pendingStatus = status.some(
-                                    (afcStatus) => afcStatus === afcReq?.status
-                                );
-                                if (pendingStatus) {
-                                    FileModel.afcInputFileHandler(afcReq);
-                                    failedRequests.push(getFormattedJson(afcReq));
-                                }
-
-                            });
-                        }
-
-                            if(!pendingStatus)
-                            logger.info(`No failed AFC Request found during cron sweep between ${createdAtHourGTE} and ${createdAtHourLTE}`);
-                            else {
-                                logger.info("notifying I-Stem for failures");
-                                EmailService.sendInternalDiagnosticEmail(ExceptionMessageTemplates.getAFCFailureMessage({data: failedRequests}));                                
-                            }
-
-                    })
-                    .catch((err) =>
-                        logger.error(`Error occured in filtering AFC ${err}`)
-                    );
-    }
 }
 
 export default AfcModel;

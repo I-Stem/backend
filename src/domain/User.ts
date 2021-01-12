@@ -82,6 +82,7 @@ class UserModel {
         this.organizationCode = props.organizationCode;
         this.organizationName = props.organizationName;
         this.tags = props?.tags;
+        this.rollNumber = props?.rollNumber || "";
         this.passwordResetToken = props.passwordResetToken;
         this.passwordResetExpires = props.passwordResetExpires;
         this.verifyUserToken = props.verifyUserToken;
@@ -269,7 +270,7 @@ class UserModel {
     }
 
     public async changeUserRole(
-        role: UserRoleEnum | InvitedUserRole
+        role: UserRoleEnum | UniversityRoles
     ): Promise<any> {
         const logger = loggerFactory(UserModel.servicename, "changeUserRole");
 

@@ -3,11 +3,7 @@
  *
  */
 
-<<<<<<< HEAD
-import User, { UserRoleEnum } from '../../../models/User';
-=======
 import User, { ServiceRoleEnum, UserRoleEnum } from '../../../models/User';
->>>>>>> e02d862... -- Squash commits --
 import { response } from '../../../utils/response';
 import * as HttpStatus from 'http-status-codes';
 import { Request, Response } from 'express';

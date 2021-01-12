@@ -14,6 +14,7 @@ export const enum MessageLabel {
     JOB_APPLICATION = 'JOB_APPLICATION',
     MENTORSHIP = 'MENTORSHIP',
     AFC_FAILURE = 'AFC_FAILURE',
+    ISTEM_ADMIN_FLOW = "ISTEM_ADMIN_FLOW"
 }
 
 export const enum MessageStatus {

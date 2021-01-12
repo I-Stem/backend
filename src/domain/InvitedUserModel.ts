@@ -1,6 +1,5 @@
 import emailService from "../services/EmailService";
 import loggerFactory from "../middlewares/WinstonLogger";
-
 import InvitedUserDbModel from "../models/InvitedUser";
 import AuthMessageTemplates from "../MessageTemplates/AuthTemplates";
 import Locals from "../providers/Locals";
@@ -27,7 +26,7 @@ export interface InvitedUser {
     _id?: string;
     userId?: string;
     rollNumber?: string;
-    role: InvitedUserRole;
+    role: UniversityRoles;
 }
 
 class InvitedUserModel {
