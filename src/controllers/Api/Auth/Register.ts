@@ -38,7 +38,9 @@ class RegisterController {
                 req.body.userType,
                 req.body.organizationName
             ),
-            serviceRole: UserModel.getDefaultServiceRoleForUser(req.body.userType),
+            serviceRole: UserModel.getDefaultServiceRoleForUser(
+                req.body.userType
+            ),
             fullname: req.body.fullname,
         });
 
@@ -154,8 +156,8 @@ class RegisterController {
                         AuthMessageTemplates.getNewOrganizationRegistrationRequestMessage(
                             {
                                 firstUser: persistedUser,
-                                approvalLink: `${process.env.APP_URL}/api/university/organ/req/${persistedUser.organizationCode}/approve`,
-                                rejectionLink: `${process.env.APP_URL}/api/university/organ/req/${persistedUser.organizationCode}/reject`,
+                                approvalLink: `${process.env.APP_URL}/${process.env.UNIVERSITY_REQUEST_API}/${persistedUser.organizationCode}/approve`,
+                                rejectionLink: `${process.env.APP_URL}/${process.env.UNIVERSITY_REQUEST_API}/${persistedUser.organizationCode}/reject`,
                             }
                         )
                     );
