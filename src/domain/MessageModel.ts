@@ -14,10 +14,7 @@ export const enum MessageLabel {
     JOB_APPLICATION = 'JOB_APPLICATION',
     MENTORSHIP = 'MENTORSHIP',
     AFC_FAILURE = 'AFC_FAILURE',
-<<<<<<< HEAD
     ISTEM_ADMIN_FLOW = "ISTEM_ADMIN_FLOW"
-=======
->>>>>>> a3f6820... google oauth changes
 }
 
 export const enum MessageStatus {

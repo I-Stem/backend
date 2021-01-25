@@ -73,8 +73,7 @@ class AFCController {
                 const resultsPerPage = 10;
                 const page = parseInt((req.query.page as string) ?? "1");
                 let query = req.query as any;
-                // let afcQuery;
-                // console.log(_searchString, req.query);
+
                 logger.info(
                     "Search string: %o and request query: %o",
                     _searchString,
@@ -94,9 +93,6 @@ class AFCController {
                     ],
                 });
                 afcQuery
-                    //.populate({
-                    //select: 'name slug'
-                    //})
                     .where("triggeredBy")
                     .equals("user")
                     .sort({ updatedAt: -1 })
@@ -233,6 +229,7 @@ class AFCController {
                     serviceRequestId: afcRequest.afcRequestId,
                     aiServiceConvertedFileURL: afcRequest.outputURL || "",
                     pageRanges: [req.body.escalatedPageRange],
+                    escalatorOrganization: res.locals.user.organizationCode,
                 });
                 escalationRequest.persist();
                 await afcRequest.changeStatusTo(
@@ -265,7 +262,6 @@ class AFCController {
                     " with error: %o",
                 error
             );
-
             return createResponse(
                 res,
                 HttpStatus.BAD_GATEWAY,
@@ -285,6 +281,7 @@ class AFCController {
 
         try {
             const file = await FileModel.getFileByHash(req.body.hash);
+
             logger.info(
                 `${req.body.hash}, ${req.body.pages}, ${req.body.docType}`
             );
@@ -304,15 +301,55 @@ class AFCController {
                     })
                 );
 
-                file?.waitingQueue.forEach(async (requestId) => {
-                    const afcRequest = await AfcModel.getAfcModelById(
-                        requestId
+                if (FileModel.isMathDocType(req.body.docType)) {
+                    file?.mathOcrWaitingQueue.forEach(async (requestId) => {
+                        const afcRequest = await AfcModel.getAfcModelById(
+                            requestId
+                        );
+
+                        if (afcRequest) {
+                            const user = await UserModel.getUserById(
+                                afcRequest?.userId
+                            );
+                            if (user) {
+                                AfcModel.sendAfcFailureMessageToUser(
+                                    user,
+                                    afcRequest
+                                );
+                            }
+                        }
+                        await afcRequest?.changeStatusTo(
+                            AFCRequestStatus.OCR_FAILED
+                        );
+                    });
+                } else {
+                    file?.ocrWaitingQueue.forEach(async (requestId) => {
+                        const afcRequest = await AfcModel.getAfcModelById(
+                            requestId
+                        );
+
+                        if (afcRequest) {
+                            const user = await UserModel.getUserById(
+                                afcRequest?.userId
+                            );
+                            if (user) {
+                                AfcModel.sendAfcFailureMessageToUser(
+                                    user,
+                                    afcRequest
+                                );
+                            }
+                        }
+                        await afcRequest?.changeStatusTo(
+                            AFCRequestStatus.OCR_FAILED
+                        );
+                    });
+                }
+
+                if (file) {
+                    await new FileModel(file).clearWaitingQueue(
+                        req.body.docType
                     );
-                    await afcRequest?.changeStatusTo(
-                        AFCRequestStatus.OCR_FAILED
-                    );
-                });
-                if (file) await new FileModel(file).clearWaitingQueue();
+                }
                 return createResponse(res, HttpStatus.OK, "callback received");
             }
             await file?.updateOCRResults(
@@ -322,17 +359,24 @@ class AFCController {
                 req.body.docType
             );
 
-            file?.waitingQueue.forEach((afcRequestId) => {
-                AfcResponseQueue.dispatch({
-                    fileId: file.fileId,
-                    afcRequestId: afcRequestId,
+            if (FileModel.isMathDocType(req.body.docType)) {
+                file?.mathOcrWaitingQueue.forEach((afcRequestId) => {
+                    AfcResponseQueue.dispatch({
+                        fileId: file.fileId,
+                        afcRequestId: afcRequestId,
+                    });
                 });
-            });
-
-            logger.info("Clearing the waiting queue");
-            file?.clearWaitingQueue();
+            } else {
+                file?.ocrWaitingQueue.forEach((afcRequestId) => {
+                    AfcResponseQueue.dispatch({
+                        fileId: file.fileId,
+                        afcRequestId: afcRequestId,
+                    });
+                });
+            }
+            logger.info("Clearing the waiting queue...");
+            file?.clearWaitingQueue(req.body.docType);
         } catch (error) {
-            // console.log(err);
             logger.error("Error occurred: %o", error);
 
             return createResponse(

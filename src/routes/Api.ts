@@ -4,7 +4,6 @@
  */
 
 import { Router } from "express";
-import HomeController from "../controllers/Api/Home";
 import CreditController from "../controllers/Api/Credit";
 import FileController from "../controllers/Api/File";
 import AuthRouter from "./Auth";
@@ -26,8 +25,6 @@ import UserRouter from "./User";
 import EscalationRouter from "./Escalation";
 
 const router = Router();
-
-router.get("/", HomeController.index);
 
 router.use("/auth", AuthRouter);
 router.use("/afc", AfcRouter);

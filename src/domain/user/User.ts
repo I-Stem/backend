@@ -3,10 +3,10 @@ import User, {
     ServiceRoleEnum,
     UserRoleEnum,
     UserStatusEnum,
-} from "../models/User";
-import { IUser, Tokens } from "../interfaces/models/user";
-import loggerFactory from "../middlewares/WinstonLogger";
-import LedgerModel from "./LedgerModel";
+} from "../../models/User";
+import { IUser, Tokens } from "../../interfaces/models/user";
+import loggerFactory from "../../middlewares/WinstonLogger";
+import LedgerModel from "../LedgerModel";
 import { plainToClass } from "class-transformer";
 import { doesListContainElement } from "../../utils/library";
 import UniversityModel, { UniversityRoles } from "../UniversityModel";
@@ -54,8 +54,9 @@ export interface UserModelProps {
     role?: UserRoleEnum | UniversityRoles | OtherUserRoles;
     organizationName?: string;
     organizationCode: string;
-    tags?: string[];
     rollNumber?: string;
+    serviceRole: ServiceRoleEnum;
+    tags?: string[];
     passwordResetToken?: string;
     passwordResetExpires?: Date;
     verifyUserToken?: string;
@@ -63,7 +64,8 @@ export interface UserModelProps {
     isVerified?: boolean;
     showOnboardStudentsCard?: boolean;
     showOnboardStaffCard?: boolean;
-    serviceRole: ServiceRoleEnum;
+    oauthProvider: OAuthProvider;
+    oauthProviderId?: string;
 }
 
 class UserModel {
@@ -112,6 +114,8 @@ class UserModel {
         this.showOnboardStudentsCard = props.showOnboardStudentsCard;
         this.showOnboardStaffCard = props.showOnboardStaffCard;
         this.serviceRole = props.serviceRole;
+        this.oauthProvider = props.oauthProvider;
+        this.oauthProviderId = props.oauthProviderId;
     }
 
     public async persist() {

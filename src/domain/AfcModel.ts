@@ -54,6 +54,7 @@ export enum DocType {
     MATH = 'MATH',
     NONMATH = 'NONMATH',
 }
+
 export interface AFCRequestProps {
     _id?: string;
     afcRequestId?: string;
@@ -393,110 +394,6 @@ class AfcModel implements AFCRequestProps {
             )
         );
     }
-
-    public static async updateAfcPageCount(
-        afcId: string,
-        filePath: string
-    ): Promise<any> {
-        const logger = loggerFactory(
-            AfcModel.serviceName,
-            'updateAfcPageCount'
-        );
-        let pageCount = 0;
-        let creationTime = 0;
-        logger.info(`AFC REQUEST ID: ${afcId}`);
-        const extension = filePath.split('.').pop()?.toUpperCase();
-        logger.info(`EXTENSION FOR FILE: ${extension}`);
-        if (extension === AFCRequestOutputFormat.PDF) {
-            logger.info('url: ', filePath);
-            pdfJS.getDocument({ url: filePath }).promise.then(
-                async function (doc) {
-                    const numPages = doc.numPages;
-                    logger.info('# Document Loaded');
-                    logger.info('Number of Pages: ' + numPages);
-                    const afc = await AfcDbModel.findByIdAndUpdate(
-                        afcId,
-                        {
-                            pageCount: numPages
-                        },
-                        { new: true }
-                    ).lean();
-                    pageCount = afc?.pageCount || 0;
-                    creationTime = new Date((afc as unknown as any).createdAt).getTime();
-                    await AfcModel.setExpiryTime(afc?._id, creationTime, pageCount);
-                },
-                function (err) {
-                    logger.error('Error', err);
-                }
-            );
-        } else {
-            const afc = await AfcDbModel.findByIdAndUpdate(
-                afcId,
-                {
-                    pageCount: 1
-                },
-                { new: true }
-            ).lean();
-            pageCount = afc?.pageCount || 0;
-        }
-        return pageCount;
-    }
-
-    public static async setExpiryTime(afcId: string, creationTime: number, pageNumber: number) {
-        const expiryTime = new Date(
-            creationTime + Math.ceil(pageNumber / 100) * 1000 * 60 * 60
-        );
-        await AfcDbModel.findByIdAndUpdate(afcId, {expiryTime});
-    }
-
-    public static async updateAfcPageCount(
-        afcId: string,
-        filePath: string
-    ): Promise<any> {
-        const logger = loggerFactory(
-            AfcModel.serviceName,
-            'updateAfcPageCount'
-        );
-        let pageCount = 0;
-        let creationTime = 0;
-        logger.info(`AFC REQUEST ID: ${afcId}`);
-        const extension = filePath.split('.').pop()?.toUpperCase();
-        logger.info(`EXTENSION FOR FILE: ${extension}`);
-        if (extension === AFCRequestOutputFormat.PDF) {
-            logger.info('url: ', filePath);
-            pdfJS.getDocument({ url: filePath }).promise.then(
-                async function (doc) {
-                    const numPages = doc.numPages;
-                    logger.info('# Document Loaded');
-                    logger.info('Number of Pages: ' + numPages);
-                    const afc = await AfcDbModel.findByIdAndUpdate(
-                        afcId,
-                        {
-                            pageCount: numPages
-                        },
-                        { new: true }
-                    ).lean();
-                    pageCount = afc?.pageCount || 0;
-                    creationTime = new Date((afc as unknown as any).createdAt).getTime();
-                    await AfcModel.setExpiryTime(afc?._id, creationTime, pageCount);
-                },
-                function (err) {
-                    logger.error('Error', err);
-                }
-            );
-        } else {
-            const afc = await AfcDbModel.findByIdAndUpdate(
-                afcId,
-                {
-                    pageCount: 1
-                },
-                { new: true }
-            ).lean();
-            pageCount = afc?.pageCount || 0;
-        }
-        return pageCount;
-    }
-
 }
 
 export default AfcModel;

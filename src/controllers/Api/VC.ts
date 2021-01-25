@@ -311,7 +311,7 @@ class VCController {
                 req.query.id as string
             );
 
-            file?.waitingQueue.forEach(async (vcRequestId) => {
+            file?.ocrWaitingQueue.forEach(async (vcRequestId) => {
                 try {
                     const vcRequest = await VcModel.getVCRequestById(
                         vcRequestId
@@ -325,19 +325,15 @@ class VCController {
                             videoId: req.query.id as string,
                         });
                     }
+
+                    file?.clearWaitingQueue(DocType.NONMATH);
                 } catch (error) {
-                    logger.error(
-                        "error while updating vc request status: %o",
-                        error
-                    );
+                    logger.error("Error in vc callback flow: %o", error);
                 }
             });
-
-            file?.clearWaitingQueue();
         } catch (error) {
-            logger.error("Error in vc callback flow: %o", error);
+            logger.error("got error in vc callback: %o", error);
         }
-
         return createResponse(res, HttpStatus.OK, "success");
     }
 

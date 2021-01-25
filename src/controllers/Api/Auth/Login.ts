@@ -36,76 +36,75 @@ class Login {
         const _password = req.body.password;
 
         try {
-        const user = await UserModel.findUserByEmail(_email);
+            const user = await UserModel.findUserByEmail(_email);
 
-                if (!user) {
-                    logger.error(
-                        `${req.body.email} is not registered with us.`
-                    );
-                    return createResponse(res, HttpStatus.NOT_FOUND, `This email address is not registered with us.`);
-                }
+            if (!user) {
+                logger.error(`${req.body.email} is not registered with us.`);
+                return createResponse(
+                    res,
+                    HttpStatus.NOT_FOUND,
+                    `This email address is not registered with us.`
+                );
+            }
 
+            if (!user.isVerified) {
+                logger.info(
+                    `User is not verified. Please verify it by clicking the link recieved on email`
+                );
+                return createResponse(
+                    res,
+                    HttpStatus.UNAUTHORIZED,
+                    `User is not verified. Please verify User by clicking the link recieved on email.`
+                );
+            }
 
-                        if (!user.isVerified) {
-                            logger.info(
-                                `User is not verified. Please verify it by clicking the link recieved on email`
-                            );
-                            return createResponse(res, HttpStatus.UNAUTHORIZED, `User is not verified. Please verify User by clicking the link recieved on email.`);
-                        }
+            const isMatch = await user.comparePassword(_password);
+            if (!isMatch) {
+                logger.error(`Wrong password for ${req.body.email}`);
+                return createResponse(
+                    res,
+                    HttpStatus.UNAUTHORIZED,
+                    `Wrong password. Try again or click Forgot password to reset it.`
+                );
+            }
 
-                        const isMatch = await user.comparePassword(_password);
-                        if (!isMatch) {
-                            logger.error(
-                                `Wrong password for ${req.body.email}`
-                            );
-                            return createResponse(res, HttpStatus.UNAUTHORIZED, `Wrong password. Try again or click Forgot password to reset it.`);
-                        }
+            const organizationStatus = await Login.checkIfOrganizationIsApproved(
+                res,
+                user
+            );
+            const token = Login.generateJWTTokenForUser(user);
 
-                        if (
-                            organizationStatus ===
-                            UniversityStatus.APPROVAL_PENDING
-                        )
-                            return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
-                                response[HttpStatus.METHOD_NOT_ALLOWED]({
-                                    message: `Approval Pending for university`,
-                                })
-                            );
-
-                        if (
-                            organizationStatus ===
-                            UniversityStatus.REGISTRATION_REJECTED
-                        )
-                            return res.status(HttpStatus.FORBIDDEN).json(
-                                response[HttpStatus.FORBIDDEN]({
-                                    message: `Registration rejected for university`,
-                                })
-                            );
-
-                        logger.info(`Login Successful for ${req.body.email}`);
-                        return createResponse(res, HttpStatus.OK, `Login successful`, {
-                                    user: {
-                                        email: user.email,
-                                        fullname: user.fullname,
-                                        id: user.userId,
-                                        _id: user.userId,
-                                        role: user.role,
-                                        serviceRole: user.serviceRole,
-                                        organizationCode: user.organizationCode,
-                                        userType: user.userType,
-                                        showOnboardStaffCard: user.showOnboardStaffCard,
-                                        showOnboardStudentsCard: user.showOnboardStudentsCard
-                                    },
-                                    token,
-                                    organizationStatus,
-                                    token_expires_in: Locals.config().jwtExpiresIn * 60,
-                                });
+            logger.info(`Login Successful for ${req.body.email}`);
+            return createResponse(res, HttpStatus.OK, `Login successful`, {
+                user: {
+                    email: user.email,
+                    fullname: user.fullname,
+                    id: user.userId,
+                    _id: user.userId,
+                    role: user.role,
+                    serviceRole: user.serviceRole,
+                    organizationCode: user.organizationCode,
+                    userType: user.userType,
+                    showOnboardStaffCard: user.showOnboardStaffCard,
+                    showOnboardStudentsCard: user.showOnboardStudentsCard,
+                },
+                token,
+                organizationStatus,
+                token_expires_in: Locals.config().jwtExpiresIn * 60,
+            });
         } catch (error) {
-
+            logger.error(`Error occcured here: ${error}`);
         }
     }
 
-    public static async checkIfOrganizationIsApproved(res: Response, user:UserModel):Promise<string> {
-        const logger = loggerFactory(Login.servicename, "checkIfOrganizationIsApproved");
+    public static async checkIfOrganizationIsApproved(
+        res: Response,
+        user: UserModel
+    ): Promise<string> {
+        const logger = loggerFactory(
+            Login.servicename,
+            "checkIfOrganizationIsApproved"
+        );
         let organizationStatus = "";
         if (
             user.userType == UserType.UNIVERSITY &&
@@ -130,11 +129,9 @@ class Login {
                     university.accountStatus ===
                     UniversityAccountStatus.REJECTED
                 ) {
-                    organizationStatus =
-                        UniversityStatus.REGISTRATION_REJECTED;
+                    organizationStatus = UniversityStatus.REGISTRATION_REJECTED;
                 } else {
-                    organizationStatus =
-                        UniversityStatus.APPROVAL_PENDING;
+                    organizationStatus = UniversityStatus.APPROVAL_PENDING;
                 }
             } catch (err) {
                 logger.error("Error occured: %o", err);
@@ -147,8 +144,8 @@ class Login {
             organizationStatus ===
             UniversityStatus.APPROVAL_PENDING
         )
-            res.status(HttpStatus.BAD_REQUEST).json(
-                response[HttpStatus.BAD_REQUEST]({
+            res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+                response[HttpStatus.METHOD_NOT_ALLOWED]({
                     message: `Approval Pending for university`,
                 })
             );
@@ -167,7 +164,7 @@ class Login {
             */
     }
 
-    public static  generateJWTTokenForUser(user:UserModel):string {
+    public static generateJWTTokenForUser(user: UserModel): string {
         const token = jwt.sign(
             {
                 email: user.email,
@@ -176,15 +173,13 @@ class Login {
                 role: user.role,
                 organizationCode: user.organizationCode,
                 serviceRole: user.serviceRole,
-                rules: packRules(
-                    abilitiesforUser(user.serviceRole).rules
-                ),
+                rules: packRules(abilitiesforUser(user.serviceRole).rules),
             },
             Locals.config().appSecret,
             { expiresIn: Locals.config().jwtExpiresIn * 60 }
         );
 
-return token;
+        return token;
     }
 }
 
