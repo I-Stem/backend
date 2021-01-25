@@ -4,4 +4,4 @@ title: Welcome to Documentation of Accommodation Services Backend APIs
 slug: /
 ---
 
-## Coming Soon!!!
+## Coming Soon via automation!!!

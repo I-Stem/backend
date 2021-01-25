@@ -20,7 +20,7 @@ jobs:
         run: |
           cp .env.example .env
           npm install
-          npm run lint
+          npm run build
         env:
           CI: true
           NODE_ENV: development
