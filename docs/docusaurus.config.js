@@ -9,6 +9,23 @@ module.exports = {
   organizationName: 'I-Stem', 
   projectName: 'backend',
   themeConfig: {
+announcementBar: {
+id: "wip",
+content: "This is a work in progress. we are working hard to give these docs a shape which is developer friendly. Contributions are very much welcome."
+},
+navbar: {
+title: "Accommodation Services Documentation",
+items : [{
+label: "API docs",
+to: "api/index"
+},
+{
+type: "doc",
+label: "Contributing Guidelines",
+docId: "contributing/index"
+}
+]
+},
     footer: {
 /*
       style: 'dark',
