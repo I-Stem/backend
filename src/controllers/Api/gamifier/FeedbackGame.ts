@@ -11,7 +11,7 @@ import {plainToClass} from 'class-transformer';
 import MessageQueue from '../../../queues/message';
 import EmailService from '../../../services/EmailService';
 import FeedbackMessageTemplates from '../../../MessageTemplates/FeedbackTemplates';
-import UserModel from '../../../domain/User';
+import UserModel from '../../../domain/user/User';
 import LedgerModel from '../../../domain/LedgerModel';
 
 class FeedbackGameController {

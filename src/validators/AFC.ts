@@ -22,7 +22,8 @@ const afcSchema = Joi.object({
     review: {
         rating: Joi.number(),
         text: Joi.string()
-    }
+    },
+    inputFileLink: Joi.string().optional()
 });
 
 export default afcSchema;

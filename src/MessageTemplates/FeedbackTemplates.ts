@@ -1,4 +1,4 @@
-import UserModel from '../domain/User';
+import UserModel from '../domain/user/User';
 import ReviewModel from '../domain/ReviewModel';
 import MessageModel, { MessageLabel } from '../domain/MessageModel';
 import { getFormattedJson } from '../utils/formatter';

@@ -7,9 +7,9 @@ import { createResponse } from '../../utils/response';
 import emailService from '../../services/EmailService';
 import AuthTemplates from '../../MessageTemplates/AuthTemplates';
 import loggerFactory from '../../middlewares/WinstonLogger';
-import UserModel from '../../domain/User';
+import UserModel from '../../domain/user/User';
 import ServiceRequestTemplates from '../../MessageTemplates/ServiceRequestTemplates';
-import User, { UserRoleEnum, UserStatusEnum } from '../../models/User';
+import User, { ServiceRoleEnum, UserRoleEnum, UserStatusEnum } from '../../models/User';
 
 export default class ServiceController {
     static serviceName = 'Service Controller';
@@ -95,14 +95,14 @@ export default class ServiceController {
         logger.info(`user: ${req.params.email}`);
         const user = await UserModel.getUserByEmail(req.params.email);
         if (user !== null) {
-            if (user.role === UserRoleEnum.PREMIUM) {
+            if (user.serviceRole === ServiceRoleEnum.PREMIUM) {
                 logger.info(`User already upgraded: ${user.email}`);
                 return createResponse(res, HttpStatus.OK, `User Already Upgraded`, {
-                    role: user.role
+                    serviceRole: user.serviceRole
                 });
             }
             try {
-                const role = await user.changeUserRole(UserRoleEnum.PREMIUM);
+                const serviceRole = await user.changeUserServiceRole(ServiceRoleEnum.PREMIUM);
                 try {
                     await UserModel.updateUserStatusLog(
                         req.params.email,
@@ -137,7 +137,7 @@ export default class ServiceController {
                     logger.error('Error occured while sending mail to user');
                 }
                 return createResponse(res, HttpStatus.OK, `User Upgraded`, {
-                    role: role
+                    serviceRole: serviceRole
                 });
             } catch (err) {
                 logger.error(`Error occured in upgrading the role of user`);

@@ -10,7 +10,7 @@ import { Request, Response } from 'express';
 import {MessageQueue} from '../../../queues';
 import loggerFactory from '../../../middlewares/WinstonLogger';
 import emailService from '../../../services/EmailService';
-import UserModel from '../../../domain/User';
+import UserModel from '../../../domain/user/User';
 import AuthMessageTemplates from '../../../MessageTemplates/AuthTemplates';
 
 class ForgotController {

@@ -4,7 +4,7 @@ import Form from 'form-data';
 import Locals from '../providers/Locals';
 import loggerFactory from '../middlewares/WinstonLogger';
 import File from '../models/File';
-import AfcModel, { AFCRequestStatus } from '../domain/AfcModel';
+import AfcModel, { AFCRequestStatus, DocType } from '../domain/AfcModel';
 import LedgerModel from '../domain/LedgerModel';
 import MessageQueue from './message';
 import {getFormattedJson} from '../utils/formatter';
@@ -14,8 +14,9 @@ import emailService from '../services/EmailService';
 import ExceptionMessageTemplates, { ExceptionTemplateNames } from '../MessageTemplates/ExceptionTemplates';
 import MLModelQueue from './MLModelQueue';
 import FileModel from '../domain/FileModel';
-import UserModel from '../domain/User';
+import UserModel from '../domain/user/User';
 import ServiceRequestTemplates from '../MessageTemplates/ServiceRequestTemplates';
+import * as https from 'https';
 
 class AfcResponseQueue {
     public queue: Bull.Queue;
@@ -117,6 +118,7 @@ documentName: afcRequest.documentName
                                 }
                             }
                         } else {
+                            afcRequest?.changeStatusTo(AFCRequestStatus.FORMATTING_FAILED);
                             logger.error('couldn\'t retrieve afc request or file: ' + afcRequest?.afcRequestId + ' file: ' + file?.fileId);
                         }
                         } catch (error) {
@@ -131,16 +133,24 @@ public async requestFormatting(afcRequest: AfcModel, file: FileModel): Promise<a
     const logger = loggerFactory(AfcResponseQueue.servicename, 'requestFormatting');
     logger.info('calling formatting API');
     try {
+        let filePath = "";
+        if(afcRequest.docType === DocType.NONMATH)
+        { filePath = String(file?.ocrFileURL || '');}
+        else{
+            filePath = String(file?.mathOcrFileUrl || '');
+        }
+        const response = await got.get(filePath);
         const formattingAPIResult = await got.post(`${process.env.SERVICE_API_HOST}/api/v1/ocr/format`, {
-            json: {
-                json: file.json,
-                format: afcRequest?.outputFormat,
-                hash: file.hash,
-                documentName: afcRequest?.documentName
-            },
-            responseType: 'json'
-        });
+                json: {
+                    json: JSON.parse(response.body),
+                    format: afcRequest?.outputFormat,
+                    hash: file.hash,
+                    documentName: afcRequest?.documentName
+                },
+                responseType: 'json'
+            });
         return formattingAPIResult.body;
+
         } catch (error) {
             this.handleFormattingAPIError(afcRequest, error, file);
             return;

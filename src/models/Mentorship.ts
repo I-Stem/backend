@@ -26,7 +26,8 @@ const MentorshipSchema = new mongoose.Schema({
     pauseMentorship: {type: Boolean},
     resumeMentorship: {type: Boolean},
     cancelMenteeship: {type: Boolean},
-    mentorshipStatus: [{status: String, actionAt: Date}]
+    mentorshipStatus: [{status: String, actionAt: Date}],
+    contactNumber: {type: String}
 },
 {
     toJSON: { virtuals: true, getters: true },

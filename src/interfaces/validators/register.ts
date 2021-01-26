@@ -12,6 +12,7 @@ export interface RegistrationRequestSchema extends ValidatedRequestSchema {
         password: String;
         fullname: String;
         userType: Number;
+        verifyToken?: String;
     };
 }
 

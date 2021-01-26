@@ -16,6 +16,7 @@ export interface AFCRequestSchema extends ValidatedRequestSchema {
         review: {
             rating: Number;
             text: String;
-        }
+        };
+        inputFileLink: String;
     };
 }

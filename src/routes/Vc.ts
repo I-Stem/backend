@@ -3,34 +3,36 @@
  *
  */
 
-import { Router } from 'express';
-import VCController from '../controllers/Api/VC';
-import { createValidator, ValidatedRequest } from 'express-joi-validation';
-import { VCRequestSchema } from '../interfaces/validators/vc';
-import VCSchema from '../validators/VC';
+import { Router } from "express";
+import VCController from "../controllers/Api/VC";
+import { createValidator, ValidatedRequest } from "express-joi-validation";
+import { VCRequestSchema } from "../interfaces/validators/vc";
+import VCSchema from "../validators/VC";
 
 const router = Router();
 
 const validator = createValidator({
-    passError: true
+    passError: true,
 });
 
-router.post('/',
+router.post(
+    "/",
     validator.body(VCSchema),
     (req: ValidatedRequest<VCRequestSchema>, res) => {
         VCController.post(req, res);
     }
 );
 
-router.post('/callback', VCController.vcCallback);
+router.post("/callback", VCController.vcCallback);
 
-router.post('/:id/review', VCController.submitVCReview);
-router.post('/:id/escalate', VCController.escalateRequest);
+router.post("/:id/review", VCController.submitVCReview);
+router.post("/:id/escalate", VCController.escalateRequest);
 
-router.get('/', VCController.index);
+router.get("/", VCController.index);
 
-router.post('/model', VCController.addCustomLanguageModel);
+router.post("/model", VCController.addCustomLanguageModel);
 
-router.get('/model', VCController.getAllModelsOfUser);
+router.get("/model", VCController.getAllModelsOfUser);
+router.get("/vcCount", VCController.vcCount);
 
 export default router;

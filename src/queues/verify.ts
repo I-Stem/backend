@@ -65,7 +65,8 @@ class VerifyQueue {
                             logger.info('Archived user populated');
                         }
                     });
-                    User.deleteMany(data, (err: Error) => {
+                    const userIds = data.map(value => value._id);
+                    User.deleteMany({_id: {$in: userIds }}, (err: Error) => {
                         if (err) {
                             logger.error(err.message);
                         } else {

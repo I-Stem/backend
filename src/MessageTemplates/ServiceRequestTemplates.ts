@@ -1,6 +1,6 @@
 import MessageModel, { MessageLabel } from '../domain/MessageModel';
 import MLModelModel from '../domain/MLModelModel';
-import UserModel from '../domain/User';
+import UserModel from '../domain/user/User';
 
 export enum ServiceRequestStatusTemplateNames {
     CUSTOM_MODEL_TRAINING_COMPLETE = 'custom_model_training_complete',
@@ -63,8 +63,11 @@ body:
             receiverId: props.userId,
             body:
             `<p>Hello ${props.userName},</p>
+            <p>Welcome aboard to I-Stem AI services!!</p>
             <p>Your request for access to AI Services has been approved by I-Stem.</p>
-            <p>Log In again to your account to access the services.</p>
+<p>Thanks a lot for onboarding with I-Stem. Our team is working hard to provide you the most accurate and state-of-art technology for the AI accommodation services, but right now, our system is in beta phase and therefore some hickups are expected, we are constantly learning from our mistakes and building it to serve you better. We are really hopeful that you will support us in this journey and together we will build a system which will be good for everyone.</p>
+ <p> You could email us anytime at info@inclusivestem.org, if you have any suggestion or issues while accessing services or you could also provide your feedback on each request or for each service from the portal as well.</p>
+            <p>Please logout and log In again to your account on I-Stem portal to access the services.</p>
             <p>I-Stem</p>
             `
         });

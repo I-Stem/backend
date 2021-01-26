@@ -16,6 +16,11 @@ const MentorshipSchema = Joi.object().keys({
         then: (schema: any) => schema,
         otherwise: Joi.string().required()
     }),
+    contactNumber: Joi.when('signupAs', {
+        is: (value: string) => !(value === 'mentee' || value === 'both'),
+        then: (schema: any) => schema,
+        otherwise: Joi.string().required()
+    }),
     questionToMentor: Joi.string().allow(''),
     menteeAgreement: Joi.boolean().when('signupAs', {
         is: (value: string) => !(value === 'mentee' || value === 'both'),

@@ -22,5 +22,6 @@ export interface MentorshipRequestSchema extends ValidatedRequestSchema {
         anythingElseMentor: String,
         mentorshipStatus: String,
         mentorshipId: String,
+        contactNumber: String
     };
 }
