@@ -8,6 +8,7 @@ export enum ExceptionTemplateNames {
 API_EXCEPTION = 'api_exception',
 VIDEO_INDEXING_API_FAILED = 'VIDEO_INDEXING_API_FAILED',
 AFC_FAILURE = 'AFC_FAILURE',
+VC_FAILURE = 'VC_FAILURE'
 }
 
 export interface ExceptionTemplateProps {
@@ -53,6 +54,12 @@ export interface FailureMessageForUserProps extends Partial<ExceptionTemplatePro
 
 export interface AFCFailureMessageProps{
     data: any[];
+    timeInterval: string[];
+}
+
+export interface VCFailureMessageProps{
+    data: any[];
+    timeInterval: string[];
 }
 
 export interface AFCFailureMessageForUserProps{
@@ -199,6 +206,19 @@ public static getVideoInsightAPIFailureMessage(props: VideoInsightFailingMessage
             templateId: ExceptionTemplateNames.AFC_FAILURE,
             subject: `Oops! AFC Failure detected during cron!`,
             body: `<p>Here are the detailed informations:</p>
+            <p>Time Interval for cron job: ${props.timeInterval[0]} ${props.timeInterval[1]}</p>
+            <pre>${getFormattedJson(props.data)}</pre>`
+        })
+    }
+
+    public static getVCFailureMessage(props: VCFailureMessageProps): MessageModel {
+        return new MessageModel({
+            isInternal: true,
+            label: MessageLabel.VC_FAILURE,
+            templateId: ExceptionTemplateNames.VC_FAILURE,
+            subject: `Oops! VC Failure detected during cron!`,
+            body: `<p>Here are the detailed informations:</p>
+            <p>Time Interval for cron job: ${props.timeInterval[0]} ${props.timeInterval[1]}</p>
             <pre>${getFormattedJson(props.data)}</pre>`
         })
     }

@@ -3,17 +3,17 @@
  *
  */
 import { Request, Response } from "express";
-import { createResponse, response } from "../../utils/response";
+import { createResponse, response } from "../../../utils/response";
 import * as HttpStatus from "http-status-codes";
-import JobPreferences from "../../models/JobPreferences";
-import loggerFactory from "../../middlewares/WinstonLogger";
-import JobPreferencesModel from "../../domain/JobPreferencesModel";
+import JobPreferences from "../../../models/JobPreferences";
+import loggerFactory from "../../../middlewares/WinstonLogger";
+import JobPreferencesModel from "../../../domain/Community/JobPreferencesModel";
 import { plainToClass } from "class-transformer";
-import emailService from "../../services/EmailService";
-import JobApplicationTemplate from "../../MessageTemplates/JobApplicationTemplate";
-import { getFormattedJson } from "../../utils/formatter";
-import UserModel from "../../domain/user/User";
-import FileModel from "../../domain/FileModel";
+import emailService from "../../../services/EmailService";
+import JobApplicationTemplate from "../../../MessageTemplates/JobApplicationTemplate";
+import { getFormattedJson } from "../../../utils/formatter";
+import UserModel from "../../../domain/user/User";
+import FileModel from "../../../domain/FileModel";
 
 class JobPreferencesController {
     static ServiceName = "JobPreferencesController";
@@ -28,9 +28,11 @@ class JobPreferencesController {
             JobPreferencesModel,
             req.body
         );
-        await jobPreferenceInstance.persistJobPreferences(res.locals.user.id);
-
         const user = await UserModel.getUserById(res.locals.user.id);
+        await jobPreferenceInstance.persistJobPreferences(
+            res.locals.user.id,
+            user?.fullname
+        );
 
         if (user !== null) {
             emailService.reportJobApplication(

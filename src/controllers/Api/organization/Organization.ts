@@ -1,18 +1,24 @@
 import { Request, Response } from "express";
-import { createResponse, response } from "../../utils/response";
-import loggerFactory from "../../middlewares/WinstonLogger";
+import { createResponse, response } from "../../../utils/response";
+import loggerFactory from "../../../middlewares/WinstonLogger";
 import * as HttpStatus from "http-status-codes";
-import ValidateSchema from "../../validators/StudentData";
+import ValidateSchema from "../../../validators/StudentData";
 import InvitedUserModel, {
     InvitedUser,
     StudentDetail,
-} from "../../domain/InvitedUserModel";
+} from "../../../domain/InvitedUserModel";
 import UniversityModel, {
+    DomainAccessStatus,
     UniversityAccountStatus,
 } from "../../domain/UniversityModel";
-import UserModel from "../../domain/user/User";
+import UserModel, { CardPreferences } from "../../domain/user/User";
 import emailService from "../../services/EmailService";
 import AuthMessageTemplates from "../../MessageTemplates/AuthTemplates";
+import AdminReviewModel, {
+    AdminReviewStatus,
+    ReviewEnum,
+    ReviewRequestType,
+} from "../../domain/AdminReviewModel";
 
 class UniversityController {
     static servicename = "University Controller";
@@ -172,6 +178,7 @@ class UniversityController {
         );
         const emails: Array<string> = req.body.emails;
         const university = req.body.organization;
+        const userType = res.locals.user.userType;
         const fullNames: Array<string> = req.body.fullNames;
         const rollNos: Array<string> = req.body.rollNos;
         const role = req.body.role;
@@ -187,23 +194,47 @@ class UniversityController {
                 HttpStatus.BAD_GATEWAY,
                 "Error in emails"
             );
-        emails.forEach((email: string, index: number) => {
-            let fullName = "";
-            let rollNumber = "";
-            if (fullNames[index]) {
-                fullName = fullNames[index] !== null ? fullNames[index] : "";
-            }
-            if (rollNos[index]) {
-                rollNumber = rollNos[index] !== null ? rollNos[index] : "";
-            }
-            data.push({
-                email: email,
-                university: university,
-                fullName: fullName,
-                rollNumber: rollNumber,
-                role: role,
-            });
-        });
+        const existingUsers: any[] = [];
+        const newUsers: any[] = [];
+        await Promise.all(
+            emails.map(async (email: string, index: number) => {
+                const user = await UserModel.findUserByEmail(email);
+                const invitedUser = await InvitedUserModel.getInvitedUserByEmail(
+                    email
+                );
+                if (user === null && invitedUser === null) {
+                    let fullName = "";
+                    let rollNumber = "";
+                    if (fullNames[index]) {
+                        fullName =
+                            fullNames[index] !== null ? fullNames[index] : "";
+                    }
+                    if (rollNos[index]) {
+                        rollNumber =
+                            rollNos[index] !== null ? rollNos[index] : "";
+                    }
+                    data.push({
+                        email: email,
+                        university: university,
+                        fullName: fullName,
+                        rollNumber: rollNumber,
+                        role: role,
+                    });
+                    newUsers.push(email);
+                    logger.info(`Data: ${JSON.stringify(data)}`);
+                } else {
+                    logger.info(
+                        `User exist: ${user?.email}, ${invitedUser?.email}`
+                    );
+                    if (user) {
+                        existingUsers.push(user?.email);
+                    } else if (invitedUser) {
+                        existingUsers.push(invitedUser?.email);
+                    }
+                }
+            })
+        );
+
         try {
             await InvitedUserModel.persistInvitedUser(data);
         } catch (err) {
@@ -215,7 +246,10 @@ class UniversityController {
             );
         }
         logger.info(`Users: ${JSON.stringify(req.body)}`);
-        return createResponse(res, HttpStatus.OK, "User data persisted");
+        return createResponse(res, HttpStatus.OK, "User data persisted", {
+            newUsers,
+            existingUsers,
+        });
     }
 
     public static async registerUniversity(req: Request, res: Response) {
@@ -257,7 +291,10 @@ class UniversityController {
         logger.info("Request Received: %o", req.body);
         const universityInstance = new UniversityModel(req.body);
         try {
-            await universityInstance.updateUniversity(req.body);
+            await universityInstance.updateUniversity(
+                req.body,
+                res.locals.user.id
+            );
         } catch (err) {
             return createResponse(
                 res,
@@ -298,6 +335,7 @@ class UniversityController {
                 });
             }
         } catch (err) {
+            logger.error(`Error occured here for metrics data: ${err}`);
             return createResponse(
                 res,
                 HttpStatus.BAD_REQUEST,
@@ -321,25 +359,39 @@ class UniversityController {
             const firstUser = await UserModel.getUserById(
                 university.registeredByUser || ""
             );
-
             if (firstUser !== null) {
-                if (req.params.action?.toUpperCase() === "APPROVE") {
+                if (req.params.action?.toUpperCase() === "APPROVED") {
                     await university.changeAccountStatusTo(
                         UniversityAccountStatus.APPROVED
                     );
+                    await AdminReviewModel.getInstance({
+                        requestType: ReviewRequestType.ORGANIZATION,
+                        status: ReviewEnum.REVIEWED,
+                        id: req.body.id,
+                        reviewerId: res.locals.user.id,
+                        adminReviewStatus: AdminReviewStatus.APPROVED,
+                    }).updateStatus();
                     emailService.sendEmailToUser(
                         firstUser,
                         AuthMessageTemplates.getNewOrganizationRequestApprovalMessage(
                             {
                                 name: firstUser?.fullname,
                                 organizationName: firstUser?.organizationName,
+                                userType: firstUser?.userType,
                             }
                         )
                     );
-                } else if (req.params.action?.toUpperCase() === "REJECT") {
+                } else if (req.params.action?.toUpperCase() === "REJECTED") {
                     university.changeAccountStatusTo(
                         UniversityAccountStatus.REJECTED
                     );
+                    await AdminReviewModel.getInstance({
+                        requestType: ReviewRequestType.ORGANIZATION,
+                        status: ReviewEnum.REVIEWED,
+                        id: req.body.id,
+                        reviewerId: res.locals.user.id,
+                        adminReviewStatus: AdminReviewStatus.REJECTED,
+                    }).updateStatus();
                     emailService.sendEmailToUser(
                         firstUser,
                         AuthMessageTemplates.getNewOrganizationRegistrationRequestRejectionMessage(
@@ -369,18 +421,25 @@ class UniversityController {
         );
     }
 
-    public static updateUniversityCards(req: Request, res: Response) {
+    public static updateUserCardsPreferences(req: Request, res: Response) {
         const logger = loggerFactory(
             UniversityController.servicename,
             "updateUniversityCards"
         );
         logger.info(
-            `${req.body.showOnboardStaffCard}. ${req.body.showOnboardStudentsCard}`
+            `Card Preferences for user: ${req.body.showOnboardStaffCard}. ${req.body.showOnboardStudentsCard}`
         );
+        const showOnboardStaffCard: boolean = req.body.showOnboardStaffCard;
+        const showOnboardStudentsCard: boolean =
+            req.body.showOnboardStudentsCard;
+        const cardPrefernces: CardPreferences = {
+            showOnboardStaffCard,
+            showOnboardStudentsCard,
+        };
         try {
             const user = UserModel.updateUniversityCardsForUser(
                 res.locals.user.id,
-                req.body
+                cardPrefernces
             );
             logger.info(user);
         } catch (error) {
@@ -440,9 +499,48 @@ class UniversityController {
             String(res.locals.user.organizationCode),
             String(searchString)
         );
-        createResponse(res, HttpStatus.OK, "Students count in university", {
-            count,
+        return createResponse(
+            res,
+            HttpStatus.OK,
+            "Students count in university",
+            {
+                count,
+            }
+        );
+    }
+
+    public static async downloadData(req: Request, res: Response) {
+        const url = await UniversityModel.emailStudentDataForUniversityAsCsv(
+            res.locals.user.organizationCode,
+            res.locals.user.id
+        );
+
+        return createResponse(res, HttpStatus.OK, "Students data csv url", {
+            url,
         });
+    }
+
+    public static async updateAutoDomainAccess(req: Request, res: Response) {
+        if (req.params.action.toUpperCase() === "APPROVED") {
+            UniversityModel.updateDomainAccessStatus(
+                req.body.code,
+                DomainAccessStatus.VERIFIED
+            );
+        } else if (req.params.action.toUpperCase() === "REJECTED") {
+            UniversityModel.updateDomainAccessStatus(
+                req.body.code,
+                DomainAccessStatus.REJECTED
+            );
+        }
+        await AdminReviewModel.getInstance({
+            requestType: ReviewRequestType.AUTO_DOMAIN,
+            status: ReviewEnum.REVIEWED,
+            id: req.body.id,
+            adminReviewStatus: (req.params
+                .action as unknown) as AdminReviewStatus,
+            reviewerId: res.locals.user.id,
+        }).updateStatus();
+        return createResponse(res, HttpStatus.OK, "Domain access updated");
     }
 }
 

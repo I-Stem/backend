@@ -19,7 +19,9 @@ class EscalationController {
         let escalations: any = [];
         try {
             escalations = await EscalationModel.getEscalationsByOrganization(
-                res.locals.user.organizationCode
+                res.locals.user.organizationCode,
+                String(req.query.status),
+                String(req.query.service)
             );
         } catch (err) {
             logger.error("Escalations not found");

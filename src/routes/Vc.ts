@@ -27,6 +27,7 @@ router.post("/callback", VCController.vcCallback);
 
 router.post("/:id/review", VCController.submitVCReview);
 router.post("/:id/escalate", VCController.escalateRequest);
+router.post("/failed/:id", VCController.updateVcForFailedRequests);
 
 router.get("/", VCController.index);
 

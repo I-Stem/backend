@@ -4,8 +4,7 @@
  */
 
 import { Router } from "express";
-import CreditController from "../controllers/Api/Credit";
-import FileController from "../controllers/Api/File";
+import HomeController from "../controllers/Api/Home";
 import AuthRouter from "./Auth";
 import TagRouter from "./Tag";
 import AfcRouter from "./Afc";
@@ -20,9 +19,12 @@ import ServiceRouter from "./Service";
 import MentorshipRouter from "./Mentorship";
 import SkillsRouter from "./Skills";
 import WebinarRouter from "./Webinars";
-import UniversityPortalRouter from "./University";
+import UniversityPortalRouter from "./Organization";
+import HiringRouter from "./Hiring";
 import UserRouter from "./User";
 import EscalationRouter from "./Escalation";
+import HackathonRouter from "./Hackathon";
+import AdminRouter from "./Admin";
 
 const router = Router();
 
@@ -45,4 +47,8 @@ router.use("/service", ServiceRouter);
 router.use("/university", UniversityPortalRouter);
 router.use("/userInfo", UserRouter);
 router.use("/escalation", EscalationRouter);
+router.use("/hiring", HiringRouter);
+router.use("/hackathon", HackathonRouter);
+router.use("/admin", AdminRouter);
+
 export default router;

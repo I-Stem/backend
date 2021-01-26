@@ -1,5 +1,5 @@
 import { Router } from "express";
-import JobPreferencesController from "../controllers/Api/JobPreferences";
+import JobPreferencesController from "../controllers/Api/Community/JobPreferences";
 import { createValidator, ValidatedRequest } from "express-joi-validation";
 import JobPreferences from "../validators/JobPreferencs";
 import { JobPreferencesRequestSchema } from "../interfaces/validators/jobPreferences";

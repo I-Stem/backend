@@ -1,9 +1,11 @@
+import { string } from "@hapi/joi";
 import mongoose from "mongoose";
 import {
     University,
     DomainAccess,
     EscalationsHandledBy,
     UniversityAccountStatus,
+    DomainAccessStatus,
 } from "../domain/UniversityModel";
 
 const allowedAccountStatuses = [
@@ -11,15 +13,23 @@ const allowedAccountStatuses = [
     UniversityAccountStatus.APPROVED,
     UniversityAccountStatus.REJECTED,
 ];
+
+const allowedDomainAccessStatus = [
+    DomainAccessStatus.NOT_VERIFIED,
+    DomainAccessStatus.PENDING,
+    DomainAccessStatus.VERIFIED,
+];
+
 const UniversitySchema = new mongoose.Schema(
     {
-        code: { type: String, unique: true, indexx: true },
+        code: { type: String, unique: true, index: true },
         name: { type: String },
         address: { type: String },
         domain: { type: String, unique: true },
         students: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
         staffs: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
         registeredByUser: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        organizationType: { type: String },
         noStudentsWithDisability: { type: String },
         escalationHandledBy: {
             type: String,
@@ -44,6 +54,20 @@ const UniversitySchema = new mongoose.Schema(
                 actionAt: Date,
             },
         ],
+        domainAccessStatusLog: [
+            {
+                status: {
+                    type: String,
+                    enum: allowedDomainAccessStatus,
+                    index: true,
+                    default: DomainAccessStatus.NOT_VERIFIED,
+                },
+                actionAt: Date,
+            },
+        ],
+        domainAccessRequestedBy: {
+            type: mongoose.Schema.Types.ObjectId
+        },
     },
     {
         toJSON: { virtuals: true, getters: true },
@@ -51,6 +75,10 @@ const UniversitySchema = new mongoose.Schema(
         timestamps: true,
     }
 );
+
+UniversitySchema.virtual("domainAccessStatus").get(function () {
+    return this.domainAccessStatusLog[this.domainAccessStatusLog.length - 1].status;
+});
 
 export default mongoose.model<University & mongoose.Document>(
     "University",

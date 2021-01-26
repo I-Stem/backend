@@ -1,6 +1,6 @@
-import loggerFactory from '../middlewares/WinstonLogger';
-import {TemplateName} from '../MessageTemplates/TemplateNames';
-import MessageDbModel from '../models/Message';
+import loggerFactory from "../middlewares/WinstonLogger";
+import { TemplateName } from "../MessageTemplates/TemplateNames";
+import MessageDbModel from "../models/Message";
 
 export const enum MessageLabel {
     INVITATION = 'INVITATION',
@@ -14,31 +14,36 @@ export const enum MessageLabel {
     JOB_APPLICATION = 'JOB_APPLICATION',
     MENTORSHIP = 'MENTORSHIP',
     AFC_FAILURE = 'AFC_FAILURE',
-    ISTEM_ADMIN_FLOW = "ISTEM_ADMIN_FLOW"
+    ISTEM_ADMIN_FLOW = "ISTEM_ADMIN_FLOW",
+    ISTEM_TEAM_NOTIFICATION = "ISTEM_TEAM_NOTIFICATION",
+    HACKATHON = "HACKATHON",
+    REPORT = "REPORT",
+    VC_FAILURE = "VC_FAILURE",
 }
 
 export const enum MessageStatus {
-    INITIATED = 'INITIATED',
-    SENT = 'SENT',
-    READ = 'READ'
+    INITIATED = "INITIATED",
+    SENT = "SENT",
+    READ = "READ",
 }
 
 export class MessageLifecycleEvent {
     status: MessageStatus = MessageStatus.INITIATED;
     actionedAt: Date;
 
-    constructor(status: MessageStatus, actionedAt: Date= new Date()) {
-this.status = status;
-this.actionedAt = actionedAt;
+    constructor(status: MessageStatus, actionedAt: Date = new Date()) {
+        this.status = status;
+        this.actionedAt = actionedAt;
     }
 }
 
-export interface IMessage  {
+export interface IMessage {
     messageId?: string;
     _id?: string;
     triggeredBy?: string;
     receiverId?: string;
     receiverEmail?: string;
+    ccEmail?: string[];
     body: string;
     subject: string;
     text?: string;
@@ -51,16 +56,16 @@ export interface IMessage  {
 }
 
 class MessageModel {
-
-    static ServiceName = 'MessageModel';
+    static ServiceName = "MessageModel";
 
     messageId?: string;
-        triggeredBy?: string;
+    triggeredBy?: string;
     receiverId?: string;
     receiverEmail?: string;
+    ccEmail?: string[];
     body: String;
     subject: String;
-    text: String = '';
+    text: String = "";
     link?: String;
     label: MessageLabel;
     status: MessageStatus;
@@ -72,20 +77,23 @@ class MessageModel {
     isInternal: boolean = false;
 
     constructor(message: IMessage) {
-        const logger = loggerFactory(MessageModel.ServiceName, 'constructor');
-        logger.info('template id: ' + message.templateId);
-        this.messageId = message.messageId || message._id || '';
+        const logger = loggerFactory(MessageModel.ServiceName, "constructor");
+        logger.info("template id: " + message.templateId);
+        this.messageId = message.messageId || message._id || "";
         this.subject = message.subject;
         this.body = message.body;
         this.templateId = message.templateId;
         this.label = message.label;
         this.status = message.status || MessageStatus.INITIATED;
-        this.statusLog = [{status: MessageStatus.INITIATED, actionedAt: new Date()}];
+        this.statusLog = [
+            { status: MessageStatus.INITIATED, actionedAt: new Date() },
+        ];
         this.isInternal = message.isInternal;
         this.statusLog = message.statusLog || [];
-        this.text = message.text || '';
-        this.receiverId = message.receiverId || '';
-        this.receiverEmail = message.receiverEmail || '';
+        this.text = message.text || "";
+        this.receiverId = message.receiverId || "";
+        this.receiverEmail = message.receiverEmail || "";
+        this.ccEmail = message.ccEmail || [];
         this.triggeredBy = message.triggeredBy;
     }
 
@@ -101,12 +109,14 @@ class MessageModel {
         this.statusLog.push(event);
 
         if (this.isInternal === false) {
-        await MessageDbModel.findByIdAndUpdate(this.messageId, {status: status,
-        $push: {statusLog: event}});
+            await MessageDbModel.findByIdAndUpdate(this.messageId, {
+                status: status,
+                $push: { statusLog: event },
+            });
         }
 
         return this;
-            }
+    }
 }
 
 export default MessageModel;

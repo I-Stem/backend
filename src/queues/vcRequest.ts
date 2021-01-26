@@ -1,5 +1,5 @@
 /**
- * Define cron job for user verification
+ * Define VC Request Queue
  *
  */
 import Queue from 'bull';
@@ -67,6 +67,7 @@ class VcRequestQueue {
             const file = await FileModel.getFileById(vcRequest.inputFileId);
 
             if (file !== null) {
+                await VcModel.updateVideoLength(file.inputURL, vcRequest.vcRequestId);
                 if (file.externalVideoId && file.ocrWaitingQueue.length === 0) {
                     await vcRequest.changeStatusTo(VCRequestStatus.INDEXING_SKIPPED);
                     VcResponseQueue.dispatch({

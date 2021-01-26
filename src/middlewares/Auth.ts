@@ -10,39 +10,54 @@ import { response, createResponse } from "../utils/response";
 import * as HttpStatus from "http-status-codes";
 import loggerFactory from "./WinstonLogger";
 import { UniversityRoles } from "../domain/UniversityModel";
+import { UserRoleEnum } from "../models/User";
 
 class Auth {
     static servicename = 'Auth';
 
-    public static ACCESS_TOKEN_MISSING_ERROR_MESSAGE: string = `The request is missing access token`;
-    public static ACCESS_TOKEN_EXPIRED_ERROR_MESSAGE: string = `The access token has expired`;
+    public static ACCESS_TOKEN_MISSING_ERROR_MESSAGE = `The request is missing access token`;
+    public static ACCESS_TOKEN_EXPIRED_ERROR_MESSAGE = `The access token has expired`;
 
-    private static AUTH_NOT_REQUIRED_ENDPOINTS =
-        process.env.EXEMPT_ENDPOINT?.split(",") || [];
+    private static AUTH_NOT_REQUIRED_ENDPOINTS = [
+        '/auth',
+        'api/v1/ocr/callback',
+        'api/vc/callback',
+        '/service/email',
+        'api/university/organ/req',
+        'api/university/domainAcess',
+    ];
 
     private static AUTHORIZED_ROUTES_FOR_STAFFS =
         process.env.EXEMPT_ENDPOINT_FOR_STAFFS?.split(",") || [];
 
+    private static AUTHORIZED_ROUTES_FOR_ADMIN =
+        process.env.EXEMPT_ENDPOINT_FOR_ADMIN?.split(",") || [];
     /**
      * Function to verify authorization of API endpoint.
-     * Returns true if the endpoint is not accessible to user.
+     * Returns true if the endpoint is accessible to current user role.
      *
      * @param path API endpoint
      * @param role User Role
      */
     private static verifyRouteAuthorization(
         path: string,
-        role: UniversityRoles
+        role: UniversityRoles | UserRoleEnum
     ): boolean {
-        if (
-            Auth.AUTHORIZED_ROUTES_FOR_STAFFS.some(
-                (endpoint) =>
-                    path.includes(endpoint) && role !== UniversityRoles.STAFF
-            )
-        ) {
-            return true;
+        if (Auth.AUTHORIZED_ROUTES_FOR_STAFFS.includes(path)) {
+            if (role === UniversityRoles.STAFF || role === UserRoleEnum.ADMIN) {
+                return true;
+            } else {
+                return false;
+            }
         }
-        return false;
+        if (Auth.AUTHORIZED_ROUTES_FOR_ADMIN.includes(path)) {
+            if (role === UserRoleEnum.ADMIN) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static verifyToken(req: Request, res: Response, next: NextFunction) {
@@ -96,13 +111,13 @@ class Auth {
                 }
                 res.locals.user = decoded; // If no error, token info is returned in 'decoded'
                 if (Auth.verifyRouteAuthorization(req.path, decoded.role)) {
+                    next();
+                } else {
                     return createResponse(
                         res,
                         HttpStatus.FORBIDDEN,
                         "Unauthorized user"
                     );
-                } else {
-                    next();
                 }
             }
         );
@@ -130,7 +145,7 @@ class Auth {
 
         logger.info("Booting the 'Auth' middleware...");
         _express.use(Auth.verifyToken);
-
+        // _express.use(Auth.AUTHORIZED_ROUTES_FOR_STAFFS, )
         return _express;
     }
 }

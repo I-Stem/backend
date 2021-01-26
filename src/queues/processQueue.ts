@@ -1,34 +1,29 @@
 /**
- * Define cron job for afc status
+ * Define cron job for afc and vc status
  *
  */
 import Queue from "bull";
 import Locals from "../providers/Locals";
 import loggerFactory from "../middlewares/WinstonLogger";
-import AfcModel from "../models/AFC";
-import { AFCRequestStatus } from "../domain/AfcModel";
-import File from "../models/File";
-import emailService from "../services/EmailService";
-import { ExceptionTemplateNames } from "../MessageTemplates/ExceptionTemplates";
-import MessageModel, { MessageLabel } from "../domain/MessageModel";
 import AFCModel from '../domain/AfcModel';
+import VcModel from "../domain/VcModel";
 /**
  *  AFC Process Queue for finding the status of every afc request.
  *  Time Interval: Past 2 Hrs to Past 1 Hr.
  *  If the request status is in waiting stage or initiated, mark them as failure and send internal diagonstic email
  */
 
-class AFCProcessQueue {
+class ProcessQueue {
     public queue: any;
-    static servicename = "AFCProcess Queue";
+    static servicename = "Process Queue";
     constructor() {
         const methodname = "constructor";
         const logger = loggerFactory.call(
             this,
-            AFCProcessQueue.servicename,
+            ProcessQueue.servicename,
             methodname
         );
-        this.queue = new Queue("AFCProcess", {
+        this.queue = new Queue("Process", {
             prefix: Locals.config().redisPrefix,
             redis: {
                 host: Locals.config().redisHttpHost,
@@ -67,22 +62,21 @@ class AFCProcessQueue {
         const methodname = "process";
         const logger = loggerFactory.call(
             this,
-            AFCProcessQueue.servicename,
+            ProcessQueue.servicename,
             methodname
         );
         this.queue.process((_job: any, _done: any) => {
-            logger.info(`Afc Process QUEUE`);
+            logger.info(`Process QUEUE`);
             const date = new Date();
-            const twoHourAgo = new Date(
-                date.getTime() - 2000 * 60 * 60
-            ).toISOString();
             const hourAgo = new Date(
                 date.getTime() - 1000 * 60 * 60
             ).toISOString();
-            AFCModel.afcCronHandler(twoHourAgo, hourAgo);
+            const now = date.toISOString();
+            AFCModel.afcCronHandler(hourAgo, now);
+            VcModel.vcCronHandler(hourAgo, now);
             _done();
         });
     }
 }
 
-export default new AFCProcessQueue();
+export default new ProcessQueue();

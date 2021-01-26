@@ -1,7 +1,7 @@
 import FileDbModel from "../models/File";
 import { plainToClass } from "class-transformer";
 import loggerFactory from "../middlewares/WinstonLogger";
-import { VCRequestStatus, VideoExtractionType } from "./VcModel";
+import VcModel, { VCRequestStatus, VideoExtractionType } from "./VcModel";
 import emailService from "../services/EmailService";
 import MessageModel, { MessageLabel } from "./MessageModel";
 import ExceptionMessageTemplates, {
@@ -284,7 +284,9 @@ class FileModel implements IFileModel {
                         } else {
                             file?.ocrWaitingQueue.splice(index!, 1);
                         }
-                        afc.changeStatusTo(AFCRequestStatus.OCR_FAILED);
+                        await new AfcModel({
+                            ...afc,
+                        }).changeStatusTo(AFCRequestStatus.OCR_FAILED);
                         await file?.save();
                         const user = await UserModel.getUserById(afc?.userId);
                         if (user) {
@@ -303,7 +305,43 @@ class FileModel implements IFileModel {
             })
             .catch((err) =>
                 logger.error(
-                    `Error occured in finding file for requested id ${err}`
+                    `Error occured in finding file for requested id ${err}, ${afc.id}`
+                )
+            );
+    }
+
+    public static vcInputFileHandler(vc: VcModel & mongoose.Document) {
+        const logger = loggerFactory(
+            FileModel.serviceName,
+            "vcInputFileHandler"
+        );
+        FileDbModel.findById(vc.inputFileId)
+            .exec()
+            .then(async (file) => {
+                const index = file?.ocrWaitingQueue.indexOf(vc?._id);
+                if (index! > -1) {
+                    file?.ocrWaitingQueue.splice(index!, 1);
+                    await new VcModel({
+                        ...vc,
+                    }).changeStatusTo(VCRequestStatus.INSIGHT_FAILED);
+                    await file?.save();
+                    const user = await UserModel.getUserById(vc?.userId);
+                    if (user) {
+                        emailService.sendEmailToUser(
+                            user,
+                            ExceptionMessageTemplates.getAFCFailureMessageForUser(
+                                {
+                                    documentName: vc.documentName,
+                                    user: user.fullname,
+                                }
+                            )
+                        );
+                    }
+                }
+            })
+            .catch((err) =>
+                logger.error(
+                    `Error occured in finding file for requested id ${err}, ${vc.id}`
                 )
             );
     }

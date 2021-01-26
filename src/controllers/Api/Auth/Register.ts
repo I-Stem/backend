@@ -17,7 +17,7 @@ import LedgerModel from "../../../domain/LedgerModel";
 import Locals from "../../../providers/Locals";
 import UniversityModel, {
     UniversityRoles,
-} from "../../../domain/UniversityModel";
+} from "../../../domain/organization/OrganizationModel";
 import { UserDomainErrors } from "../../../domain/user/UserDomainErrors";
 import passport from "passport";
 import Login from "./Login";
@@ -50,18 +50,40 @@ class RegisterController {
                     ),
                     fullname: req.body.fullname,
                     oauthProvider: OAuthProvider.PASSWORD,
+                    context: req.body.context,
                 },
                 req.body.verifyToken,
                 req.body.verificationLink
             );
-        } catch (error) {
-            logger.error("Bad Request: %o", error);
-            switch (error.name) {
-                case UserDomainErrors.UserAlreadyRegisteredError:
-                    return createResponse(
-                        res,
-                        HttpStatus.CONFLICT,
-                        `Account already exists. Please sign in to your account.`
+            logger.info(`University: ${JSON.stringify(university)}`);
+            if (!persistedUser) {
+                return createResponse(
+                    res,
+                    HttpStatus.BAD_GATEWAY,
+                    "couldn't store user information"
+                );
+            }
+            if (university !== null && persistedUser.role === UniversityRoles.STUDENT) {
+                logger.info(`Updating user details for university student`);
+                UserModel.updateUserDetail(persistedUser.userId, {
+                    organizationCode: university.code,
+                    userType: UserType.UNIVERSITY,
+                    role: UniversityRoles.STUDENT,
+                    organizationName: university.name,
+                });
+                logger.info(`${JSON.stringify(user)}, ${persistedUser.userId}`);
+            }
+
+            if (req.body.verifyToken) {
+                const isUserValid = await InvitedUserModel.checkInvitedUser(
+                    _email,
+                    req.body.verifyToken
+                );
+                if (isUserValid) {
+                    logger.info(`Adding invited user`);
+                    InvitedUserModel.updateStatus(
+                        _email,
+                        InvitedUserEnum.REGISTERED
                     );
                     break;
 
@@ -98,102 +120,92 @@ class RegisterController {
         );
     }
 
-    public static async handleLoginOrRegistrationByOAuth(
-        req: Request,
-        res: Response,
-        oauthProvider: string
-    ) {
+    public static async handleLoginOrRegistrationByOAuth(res: Response) {
         const logger = loggerFactory(
             RegisterController.servicename,
             "handleLoginOrRegistrationByOauth"
         );
         try {
-            passport.authenticate(
-                oauthProvider,
-                {
-                    failureRedirect: `${process.env.PORTAL_URL}/login`,
-                    session: false,
-                },
-                (error, user) => {
-                    try {
-                        const logger = loggerFactory(
-                            "AuthRouter",
-                            "googleRedirectCallback"
-                        );
-                        if (error) {
-                            throw error;
-                        }
+            return (error, user) => {
+                try {
+                    const logger = loggerFactory(
+                        "AuthRouter",
+                        "googleRedirectCallback"
+                    );
 
-                        const token = Login.generateJWTTokenForUser(user);
-                        res.redirect(
-                            `${process.env.PORTAL_URL}/login/googleLogin?token=` +
-                                token
-                        );
-                    } catch (error) {
-                        logger.error("error: " + error.name);
-                        switch (error.name) {
-                            case UserDomainErrors.InvitationEmailMismatchError:
-                                res.redirect(
-                                    `${
-                                        process.env.PORTAL_URL
-                                    }/login/googleLogin?message=${encodeURIComponent(
-                                        error.message
-                                    )}`
-                                );
-                                break;
+                    if (error) {
+                        throw error;
+                    }
 
-                            case UserDomainErrors.UserAlreadyRegisteredError:
-                                return res.redirect(
-                                    `${
-                                        process.env.PORTAL_URL
-                                    }/login/googleLogin?message=${encodeURIComponent(
-                                        error.message
-                                    )}`
-                                );
-                                break;
+                    const token = Login.generateJWTTokenForUser(user);
+                    res.redirect(
+                        `${process.env.PORTAL_URL}/login/googleLogin?token=` +
+                            token
+                    );
+                } catch (error) {
+                    logger.error("error: %o", error);
+                    switch (error.name) {
+                        case UserDomainErrors.InvitationEmailMismatchError:
+                            res.redirect(
+                                `${
+                                    process.env.PORTAL_URL
+                                }/login/googleLogin?message=${encodeURIComponent(
+                                    error.message
+                                )}`
+                            );
+                            break;
 
-                            case UserDomainErrors.UserInfoSaveError:
-                                return res.redirect(
-                                    `${
-                                        process.env.PORTAL_URL
-                                    }/login/googleLogin?message=${encodeURIComponent(
-                                        error.message
-                                    )}`
-                                );
-                                break;
+                        case UserDomainErrors.UserAlreadyRegisteredError:
+                            return res.redirect(
+                                `${
+                                    process.env.PORTAL_URL
+                                }/login/googleLogin?message=${encodeURIComponent(
+                                    error.message
+                                )}`
+                            );
+                            break;
 
-                            case UserDomainErrors.InvalidInvitationTokenError:
-                                return res.redirect(
-                                    `${
-                                        process.env.PORTAL_URL
-                                    }/login/googleLogin?message=${encodeURIComponent(
-                                        error.message
-                                    )}`
-                                );
-                                break;
+                        case UserDomainErrors.UserInfoSaveError:
+                            return res.redirect(
+                                `${
+                                    process.env.PORTAL_URL
+                                }/login/googleLogin?message=${encodeURIComponent(
+                                    error.message
+                                )}`
+                            );
+                            break;
 
-                            case UserDomainErrors.NoSuchUserError:
-                                return res.redirect(
-                                    `${
-                                        process.env.PORTAL_URL
-                                    }/login/googleLogin?message=${encodeURIComponent(
-                                        error.message
-                                    )}`
-                                );
-                                break;
+                        case UserDomainErrors.InvalidInvitationTokenError:
+                            return res.redirect(
+                                `${
+                                    process.env.PORTAL_URL
+                                }/login/googleLogin?message=${encodeURIComponent(
+                                    error.message
+                                )}`
+                            );
+                            break;
 
-                            default:
-                                res.redirect(
-                                    `${
-                                        process.env.PORTAL_URL
-                                    }/login/googleLogin?message=${encodeURIComponent(
-                                        "unknown error"
-                                    )}`
-                                );
-                        }
+                        case UserDomainErrors.NoSuchUserError:
+                            return res.redirect(
+                                `${
+                                    process.env.PORTAL_URL
+                                }/login/googleLogin?message=${encodeURIComponent(
+                                    error.message
+                                )}`
+                            );
+                            break;
+
+                        default:
+                            res.redirect(
+                                `${
+                                    process.env.PORTAL_URL
+                                }/login/googleLogin?message=${encodeURIComponent(
+                                    "unknown error"
+                                )}`
+                            );
                     }
                 }
-            )(req, res);
+            };
         } catch (error) {
             logger.error("error: " + error.name);
         }

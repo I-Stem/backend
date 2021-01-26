@@ -1,4 +1,4 @@
-import User from "../../models/User";
+import User, { UserRoleEnum } from "../../models/User";
 import { Request, Response } from "express";
 import { createResponse, response } from "../../utils/response";
 import * as HttpStatus from "http-status-codes";
@@ -7,7 +7,7 @@ import { UserType } from "../../domain/user";
 import UniversityModel, {
     UniversityAccountStatus,
     UniversityRoles,
-} from "../../domain/UniversityModel";
+} from "../../domain/organization/OrganizationModel";
 import { UniversityStatus } from "./Auth/Login";
 import UserModel from "../../domain/user/User";
 
@@ -22,7 +22,6 @@ class UserInfo {
         );
         let organizationStatus = "";
         const user = await UserModel.findUserByEmail(res.locals.user.email);
-        
         if (
             user?.userType == UserType.UNIVERSITY &&
             user?.role == UniversityRoles.STAFF
@@ -55,29 +54,40 @@ class UserInfo {
             }
         }
 
-        if(user !== null) 
-        return res.status(HttpStatus.OK).json(
-            response[HttpStatus.OK]({
-                message: `User details`,
-                data: {
-                    user: {
-                        email: user.email,
-                        fullname: user.fullname,
-                        id: user.userId,
-                        _id: user.userId,
-                        role: user.role,
-                        serviceRole: user.serviceRole,
-                        organizationCode: user.organizationCode,
-                        userType: user.userType,
-                        showOnboardStaffCard: user.showOnboardStaffCard,
-                        showOnboardStudentsCard: user.showOnboardStudentsCard
+        if (user !== null) {
+            let university;
+            if (
+                user.role === UniversityRoles.STAFF ||
+                user.role === UserRoleEnum.ADMIN
+            ) {
+                university = await UniversityModel.getUniversityByCode(
+                    user.organizationCode
+                );
+            }
+            const contextPath = await user.getFirstTimeContext();
+            return res.status(HttpStatus.OK).json(
+                response[HttpStatus.OK]({
+                    message: `User details`,
+                    data: {
+                        user: {
+                            email: user.email,
+                            fullname: user.fullname,
+                            id: user.userId,
+                            _id: user.userId,
+                            role: user.role,
+                            serviceRole: user.serviceRole,
+                            organizationCode: user.organizationCode,
+                            userType: user.userType,
+                            escalationSetting: university?.escalationHandledBy,
+                            userPreferences: user.userPreferences,
+                        },
+                        organizationStatus,
+                        contextPath,
                     },
-                                        organizationStatus,
-                },
-            })
-        );
-else
-return createResponse(res, HttpStatus.NOT_FOUND, "user not found");
+                })
+            );
+        } else
+            return createResponse(res, HttpStatus.NOT_FOUND, "user not found");
     }
 }
 export default UserInfo;

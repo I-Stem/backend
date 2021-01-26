@@ -1,18 +1,23 @@
 /**
  * Define Service API
  */
-import * as HttpStatus from 'http-status-codes';
-import { Request, Response } from 'express';
-import { createResponse } from '../../utils/response';
-import emailService from '../../services/EmailService';
-import AuthTemplates from '../../MessageTemplates/AuthTemplates';
-import loggerFactory from '../../middlewares/WinstonLogger';
-import UserModel from '../../domain/user/User';
-import ServiceRequestTemplates from '../../MessageTemplates/ServiceRequestTemplates';
-import User, { ServiceRoleEnum, UserRoleEnum, UserStatusEnum } from '../../models/User';
+import * as HttpStatus from "http-status-codes";
+import { Request, Response } from "express";
+import { createResponse } from "../../utils/response";
+import emailService from "../../services/EmailService";
+import AuthTemplates from "../../MessageTemplates/AuthTemplates";
+import loggerFactory from "../../middlewares/WinstonLogger";
+import UserModel from "../../domain/user/User";
+import ServiceRequestTemplates from "../../MessageTemplates/ServiceRequestTemplates";
+import User, { ServiceRoleEnum, UserStatusEnum } from "../../models/User";
+import AdminReviewModel, {
+    AdminReviewStatus,
+    ReviewEnum,
+    ReviewRequestType,
+} from "../../domain/AdminReviewModel";
 
 export default class ServiceController {
-    static serviceName = 'Service Controller';
+    static serviceName = "Service Controller";
     /**
      * Api to send email to I-Stem to upgrade the user role
      *
@@ -21,17 +26,29 @@ export default class ServiceController {
      */
     public static async index(req: Request, res: Response): Promise<any> {
         const loggedInUser = res.locals.user;
-        const logger = loggerFactory(ServiceController.serviceName, 'index');
+        const logger = loggerFactory(ServiceController.serviceName, "index");
         logger.info(`user: ${loggedInUser.email}`);
         try {
             const user = await UserModel.getUserByEmail(loggedInUser.email);
             try {
-                emailService.serviceUpgradeRequest(
-                    AuthTemplates.getServiceUpgradeMessage({
-                        user: user!,
-                        link: `${process.env.APP_URL}/api/service/email/${user?.email}`
-                    })
-                );
+                if (user) {
+                    emailService.serviceUpgradeRequest(
+                        AuthTemplates.getServiceUpgradeMessage({
+                            user: user,
+                            link: `${process.env.PORTAL_URL}/admin`,
+                        })
+                    );
+                    await AdminReviewModel.getInstance({
+                        requestType: ReviewRequestType.SERVICE,
+                        status: ReviewEnum.REQUESTED,
+                        serviceRoleRequest: {
+                            role: ServiceRoleEnum.PREMIUM,
+                            userId: user.userId,
+                            fullName: user.fullname,
+                            email: user.email,
+                        },
+                    }).persist();
+                }
                 try {
                     await UserModel.updateUserStatusLog(
                         loggedInUser.email,
@@ -81,28 +98,35 @@ export default class ServiceController {
     /**
      * Api to upgrade the user role and confirmation email to user for service upgradation
      *
-     * @param req: HttpRequest<{email: string}>
+     * @param req: HttpRequest<{ email: string }, {}, { id: string }>
      * @param res: HttpResponse
      */
     public static async upgradeUser(
-        req: Request<{ email: string }>,
+        req: Request<{ email: string }, {}, { id: string }>,
         res: Response
     ): Promise<any> {
         const logger = loggerFactory(
             ServiceController.serviceName,
-            'upgradeUser'
+            "upgradeUser"
         );
         logger.info(`user: ${req.params.email}`);
         const user = await UserModel.getUserByEmail(req.params.email);
         if (user !== null) {
             if (user.serviceRole === ServiceRoleEnum.PREMIUM) {
                 logger.info(`User already upgraded: ${user.email}`);
-                return createResponse(res, HttpStatus.OK, `User Already Upgraded`, {
-                    serviceRole: user.serviceRole
-                });
+                return createResponse(
+                    res,
+                    HttpStatus.OK,
+                    `User Already Upgraded`,
+                    {
+                        serviceRole: user.serviceRole,
+                    }
+                );
             }
             try {
-                const serviceRole = await user.changeUserServiceRole(ServiceRoleEnum.PREMIUM);
+                const serviceRole = await user.changeUserServiceRole(
+                    ServiceRoleEnum.PREMIUM
+                );
                 try {
                     await UserModel.updateUserStatusLog(
                         req.params.email,
@@ -111,6 +135,13 @@ export default class ServiceController {
                     logger.info(
                         `User status log: ${UserStatusEnum.ROLE_UPGRADE_REQUEST_COMPLETE}`
                     );
+                    await AdminReviewModel.getInstance({
+                        requestType: ReviewRequestType.SERVICE,
+                        status: ReviewEnum.REVIEWED,
+                        id: req.body.id,
+                        adminReviewStatus: AdminReviewStatus.APPROVED,
+                        reviewerId: res.locals.user.id,
+                    }).updateStatus();
                 } catch (err) {
                     logger.error(`Error occured updating log`);
                 }
@@ -119,9 +150,10 @@ export default class ServiceController {
                         user,
                         ServiceRequestTemplates.getAccessRequestComplete({
                             userName: user?.fullname,
-                            userId: user?.userId
+                            userId: user?.userId,
                         })
                     );
+
                     try {
                         await UserModel.updateUserStatusLog(
                             req.params.email,
@@ -134,10 +166,10 @@ export default class ServiceController {
                         logger.error(`Error occured updating log`);
                     }
                 } catch (err) {
-                    logger.error('Error occured while sending mail to user');
+                    logger.error("Error occured while sending mail to user");
                 }
                 return createResponse(res, HttpStatus.OK, `User Upgraded`, {
-                    serviceRole: serviceRole
+                    serviceRole: serviceRole,
                 });
             } catch (err) {
                 logger.error(`Error occured in upgrading the role of user`);
@@ -157,7 +189,7 @@ export default class ServiceController {
     ): Promise<any> {
         const logger = loggerFactory(
             ServiceController.serviceName,
-            'getAccessRequest'
+            "getAccessRequest"
         );
         const loggedInUser = res.locals.user;
         logger.info(`user: ${loggedInUser.email}`);

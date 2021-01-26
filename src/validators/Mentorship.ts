@@ -3,47 +3,47 @@
  *
  */
 
-import * as Joi from '@hapi/joi';
+import * as Joi from "@hapi/joi";
 
 const MentorshipSchema = Joi.object().keys({
     industry: Joi.string().required(),
     currentPosition: Joi.string().required(),
     isPWD: Joi.boolean().required(),
     associatedDisabilities: Joi.array(),
-    signupAs: Joi.string().required().allow(''),
-    learnSkills: Joi.when('signupAs', {
-        is: (value: string) => !(value === 'mentee' || value === 'both'),
+    signupAs: Joi.string().required().allow(""),
+    learnSkills: Joi.when("signupAs", {
+        is: (value: string) => !(value === "MENTEE" || value === "BOTH"),
         then: (schema: any) => schema,
-        otherwise: Joi.string().required()
+        otherwise: Joi.string().required(),
     }),
-    contactNumber: Joi.when('signupAs', {
-        is: (value: string) => !(value === 'mentee' || value === 'both'),
+    contactNumber: Joi.when("signupAs", {
+        is: (value: string) => !(value === "MENTEE" || value === "BOTH"),
         then: (schema: any) => schema,
-        otherwise: Joi.string().required()
+        otherwise: Joi.string().required(),
     }),
-    questionToMentor: Joi.string().allow(''),
-    menteeAgreement: Joi.boolean().when('signupAs', {
-        is: (value: string) => !(value === 'mentee' || value === 'both'),
+    questionToMentor: Joi.string().allow(""),
+    menteeAgreement: Joi.boolean().when("signupAs", {
+        is: (value: string) => !(value === "MENTEE" || value === "BOTH"),
         then: (schema: any) => schema,
-        otherwise: Joi.boolean().required()
+        otherwise: Joi.boolean().required(),
     }),
-    mentorSkills: Joi.when('signupAs', {
-        is: (value: string) => !(value === 'mentor' || value === 'both'),
+    mentorSkills: Joi.when("signupAs", {
+        is: (value: string) => !(value === "MENTOR" || value === "BOTH"),
         then: (schema: any) => schema,
-        otherwise: Joi.string().required()
+        otherwise: Joi.string().required(),
     }),
-    connectOften: Joi.when('signupAs', {
-        is: (value: string) => !(value === 'mentor' || value === 'both'),
+    connectOften: Joi.when("signupAs", {
+        is: (value: string) => !(value === "MENTOR" || value === "BOTH"),
         then: (schema: any) => schema,
-        otherwise: Joi.string().required()
+        otherwise: Joi.string().required(),
     }),
     questionToMentee: Joi.string(),
     pauseMentorship: Joi.boolean(),
     cancelMenteeship: Joi.boolean(),
     resumeMentorship: Joi.boolean(),
-    anythingElse: Joi.string().allow(''),
+    anythingElse: Joi.string().allow(""),
     mentorshipStatus: Joi.array(),
-    mentorshipId: Joi.string().optional()
+    mentorshipId: Joi.string().optional(),
 });
 
 export default MentorshipSchema;

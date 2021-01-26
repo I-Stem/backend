@@ -25,10 +25,11 @@ import ExceptionTemplates from "../../MessageTemplates/ExceptionTemplates";
 import FeedbackTemplates from "../../MessageTemplates/FeedbackTemplates";
 import EscalationModel, {
     AIServiceCategory,
+    EscalationStatus,
 } from "../../domain/EscalationModel";
 import LedgerModel from "../../domain/LedgerModel";
 import Credits from "../../domain/Credit";
-import ExceptionMessageTemplates from "../../MessageTemplates/ExceptionTemplates";
+import ServiceRequestTemplates from "../../MessageTemplates/ServiceRequestTemplates";
 
 function mapAFCRequestStatusToUIStatus(status: AFCRequestStatus) {
     const statusMap = new Map([
@@ -45,6 +46,7 @@ function mapAFCRequestStatusToUIStatus(status: AFCRequestStatus) {
         [AFCRequestStatus.ESCALATION_REQUESTED, 4],
         [AFCRequestStatus.ESCALATION_RESOLVED, 5],
         [AFCRequestStatus.RETRY_REQUESTED, 6],
+        [AFCRequestStatus.RESOLVED_FILE_USED, 2],
     ]);
 
     return statusMap.get(status) || 1;
@@ -169,6 +171,41 @@ class AFCController {
             const user = await UserModel.getUserById(userId);
             await user?.addUserTagIfDoesNotExist(afcData.tag);
             if (req.body.inputFileId) {
+                const escalatedFile = await EscalationModel.checkForEscalatedFile(
+                    req.body.inputFileId
+                );
+                if (escalatedFile !== null) {
+                    logger.info(
+                        `Escalated File found for source file: ${req.body.inputFileId} `
+                    );
+                    await afcData.changeStatusTo(
+                        AFCRequestStatus.RESOLVED_FILE_USED
+                    );
+                    const file = await FileModel.getFileById(
+                        req.body.inputFileId
+                    );
+                    if (file?.pages) {
+                        await afcData.updateFormattingResults(
+                            escalatedFile,
+                            file.pages
+                        );
+                    }
+                    const user = await UserModel.getUserById(userId);
+                    if (user) {
+                        AfcModel.afcRequestTransactionAndNotifyUser(
+                            afcData,
+                            afcData.pageCount || 0,
+                            "Document accessibility conversion of file:" +
+                                afcData.documentName,
+                            user
+                        );
+                    }
+                    return createResponse(
+                        res,
+                        HttpStatus.OK,
+                        "Escalated File Used"
+                    );
+                }
                 AfcRequestQueue.dispatch(afcData);
                 logger.info("AFC request added successfully.");
             } else {
@@ -192,13 +229,15 @@ class AFCController {
     public static async updateAfcForFailedRequests(
         req: Request<{ id: string }>,
         res: Response
-    ) {
-        const methodname = "updateAfc";
+    ): Promise<any> {
+        const methodname = "updateAfcForFailedRequests";
         const logger = loggerFactory(AFCController.servicename, methodname);
         logger.info(`Update AFC request: ${req.params.id}`);
         try {
             const afc = await AfcModel.getAfcModelById(req.params.id);
-            if (afc) await afc.changeStatusTo(AFCRequestStatus.RETRY_REQUESTED);
+            if (afc) {
+                await afc.changeStatusTo(AFCRequestStatus.RETRY_REQUESTED);
+            }
         } catch (err) {
             return createResponse(
                 res,
@@ -230,6 +269,8 @@ class AFCController {
                     aiServiceConvertedFileURL: afcRequest.outputURL || "",
                     pageRanges: [req.body.escalatedPageRange],
                     escalatorOrganization: res.locals.user.organizationCode,
+                    description: req.body.description,
+                    status: EscalationStatus.UNASSIGNED,
                 });
                 escalationRequest.persist();
                 await afcRequest.changeStatusTo(

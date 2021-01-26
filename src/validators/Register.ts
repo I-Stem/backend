@@ -31,6 +31,7 @@ const registrationSchema = Joi.object({
         })
         .min(3),
     verifyToken: Joi.string().allow(""),
+    context: Joi.string().allow("")
 });
 
 export default registrationSchema;

@@ -5,7 +5,7 @@
  */
 
 import * as jwt from "jsonwebtoken";
-import User from "../../../models/User";
+import User, { UserRoleEnum } from "../../../models/User";
 import Locals from "../../../providers/Locals";
 import { Request, Response, NextFunction } from "express";
 import { createResponse, response } from "../../../utils/response";
@@ -18,7 +18,7 @@ import UserModel, { UserType } from "../../../domain/user/User";
 import UniversityModel, {
     UniversityAccountStatus,
     UniversityRoles,
-} from "../../../domain/UniversityModel";
+} from "../../../domain/organization/OrganizationModel";
 
 export const enum UniversityStatus {
     REGISTRATION_PENDING = "REGISTRATION_PENDING",
@@ -72,8 +72,15 @@ class Login {
                 res,
                 user
             );
-            const token = Login.generateJWTTokenForUser(user);
-
+            let university;
+            if (
+                user.role === UniversityRoles.STAFF ||
+                user.role === UserRoleEnum.ADMIN
+            ) {
+                university = await UniversityModel.getUniversityByCode(
+                    user.organizationCode
+                );
+            }
             logger.info(`Login Successful for ${req.body.email}`);
             return createResponse(res, HttpStatus.OK, `Login successful`, {
                 user: {
@@ -87,14 +94,15 @@ class Login {
                     userType: user.userType,
                     showOnboardStaffCard: user.showOnboardStaffCard,
                     showOnboardStudentsCard: user.showOnboardStudentsCard,
+                    escalationSetting: university?.escalationHandledBy,
+                    userPreferences: user.userPreferences,
                 },
                 token,
                 organizationStatus,
                 token_expires_in: Locals.config().jwtExpiresIn * 60,
+                contextPath: await user.getFirstTimeContext(),
             });
-        } catch (error) {
-            logger.error(`Error occcured here: ${error}`);
-        }
+        } catch (error) {}
     }
 
     public static async checkIfOrganizationIsApproved(
@@ -107,7 +115,8 @@ class Login {
         );
         let organizationStatus = "";
         if (
-            user.userType == UserType.UNIVERSITY &&
+            (user.userType == UserType.UNIVERSITY ||
+                user.userType == UserType.BUSINESS) &&
             user.role == UniversityRoles.STAFF
         ) {
             try {
@@ -173,7 +182,9 @@ class Login {
                 role: user.role,
                 organizationCode: user.organizationCode,
                 serviceRole: user.serviceRole,
-                rules: packRules(abilitiesforUser(user.serviceRole).rules),
+                rules: packRules(
+                    abilitiesforUser(user.serviceRole, user.role).rules
+                ),
             },
             Locals.config().appSecret,
             { expiresIn: Locals.config().jwtExpiresIn * 60 }

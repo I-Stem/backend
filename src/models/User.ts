@@ -11,7 +11,7 @@ import * as mongoose from "mongoose";
 import * as crypto from "crypto";
 import loggerFactory from "../middlewares/WinstonLogger";
 import { OAuthProvider, OtherUserRoles, UserType } from "../domain/user";
-import { UniversityRoles } from "src/domain/UniversityModel";
+import { UniversityRoles } from "../domain/UniversityModel";
 
 const mongooseFuzzySearching = require("mongoose-fuzzy-searching");
 const servicename = "User";
@@ -47,7 +47,7 @@ export enum UserStatusEnum {
     ROLE_UPGRADE_REQUEST_COMPLETE = "ROLE_UPGRADE_REQUEST_COMPLETE",
 }
 
-export enum ServiceRoleEnum {
+export const enum ServiceRoleEnum {
     REGULAR = "REGULAR",
     PREMIUM = "PREMIUM",
 }
@@ -91,15 +91,27 @@ export const UserSchema = new mongoose.Schema(
         verifyUserToken: { type: String },
         verifyUserExpires: { type: Date },
         isVerified: { type: Boolean, default: false },
-        showOnboardStaffCard: { type: Boolean, default: true },
-        showOnboardStudentsCard: { type: Boolean, default: true },
-         oauthProvider: { type: String, 
-        enum: [OAuthProvider.FACEBOOK, OAuthProvider.GITHUB, OAuthProvider.GOOGLE, OAuthProvider.TWITTER, OAuthProvider.PASSWORD],
-    required: true,
-    default: OAuthProvider.PASSWORD
-},
+        userPreferences: {
+            cardPreferences: {
+                showOnboardStaffCard: { type: Boolean, default: true },
+                showOnboardStudentsCard: { type: Boolean, default: true },
+            },
+            darkMode: { type: Boolean, default: false },
+        },
+        oauthProvider: {
+            type: String,
+            enum: [
+                OAuthProvider.FACEBOOK,
+                OAuthProvider.GITHUB,
+                OAuthProvider.GOOGLE,
+                OAuthProvider.TWITTER,
+                OAuthProvider.PASSWORD,
+            ],
+            required: true,
+            default: OAuthProvider.PASSWORD,
+        },
         steam: { type: String },
-        oauthProviderId: {type: String},
+        oauthProviderId: { type: String },
         tokens: Array,
 
         organizationName: { type: String },
