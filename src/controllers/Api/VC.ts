@@ -17,26 +17,28 @@ import MLModelModel, {
     TrainingInstance,
     TrainingStatus,
 } from "../../domain/MLModelModel";
-import AfcModel, {
+import {AfcModel} from "../../domain/AfcModel";
+import {
     AFCRequestOutputFormat,
     AFCRequestStatus,
     AFCTriggerer,
     DocType,
-} from "../../domain/AfcModel";
-import { AFC } from "@lip/models";
+} from "../../domain/AfcModel/AFCConstants";
 import https from "https";
 import FormData from "form-data";
 import got from "got/dist/source";
-import VcModel, { VCRequestStatus } from "../../domain/VcModel";
+import {VcModel} from "../../domain/VcModel";
+import { VCRequestStatus } from "../../domain/VcModel/VCConstants";
 import FileModel from "../../domain/FileModel";
 import LedgerModel from "../../domain/LedgerModel";
 import UserModel from "../../domain/user/User";
 import EmailService from "../../services/EmailService";
 import FeedbackMessageTemplates from "../../MessageTemplates/FeedbackTemplates";
-import EscalationModel, {
+import {EscalationModel} from "../../domain/EscalationModel";
+import {
     AIServiceCategory,
     EscalationStatus,
-} from "../../domain/EscalationModel";
+} from "../../domain/EscalationModel/EscalationConstants";
 import VcResponseQueue from "../../queues/VcResponse";
 import Credit from "../../domain/Credit";
 

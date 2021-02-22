@@ -1,13 +1,15 @@
 import FileDbModel from "../models/File";
 import { plainToClass } from "class-transformer";
 import loggerFactory from "../middlewares/WinstonLogger";
-import VcModel, { VCRequestStatus, VideoExtractionType } from "./VcModel";
+import {VcModel} from "./VCModel";
+import { VCRequestStatus, VideoExtractionType } from "./VcModel/VCConstants";
 import emailService from "../services/EmailService";
 import MessageModel, { MessageLabel } from "./MessageModel";
 import ExceptionMessageTemplates, {
     ExceptionTemplateNames,
 } from "../MessageTemplates/ExceptionTemplates";
-import AfcModel, { AFCRequestStatus, DocType } from "./AfcModel";
+import {AfcModel} from "./AfcModel";
+import { AFCRequestStatus, DocType } from "./AfcModel/AFCConstants";
 import UserModel from "./user/User";
 import { saveOCRjson } from "../utils/file";
 import mongoose from "src/providers/Database";

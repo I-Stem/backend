@@ -1,8 +1,9 @@
 import mongoose from "mongoose";
-import EscalationModel, {
+import {EscalationModel} from "../domain/EscalationModel";
+import {
     AIServiceCategory,
     EscalationStatus,
-} from "../domain/EscalationModel";
+} from "../domain/EscalationModel/EscalationConstants";
 
 /**
  * Escalation Model Schema

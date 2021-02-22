@@ -1,45 +1,20 @@
 import { createObjectCsvStringifier } from "csv-writer";
 import { saveStudentsReportCSV } from "../../utils/file";
 import ServiceRequestTemplates from "../../MessageTemplates/ServiceRequestTemplates";
-import AdminReviewModel, {
-    ReviewEnum,
-    ReviewRequestType,
-} from "../AdminReviewModel";
+import {AdminReviewModel} from "../AdminReviewModel";
+import {ReviewEnum, ReviewRequestType} from "../AdminReviewModel/AdminReviewConstants";
 import ReportTemplate from "../../MessageTemplates/ReportTemplate";
 import loggerFactory from "../../middlewares/WinstonLogger";
 import UniversityDbModel from "../../models/Organization";
-import AfcModel from "../AfcModel";
+import {AfcModel} from "../AfcModel";
 import FeedbackModel, { FeedbackCategory } from "../FeedbackModel";
 import FileModel from "../FileModel";
 import UserModel from "../user/User";
 import UserDBModel from "../../models/User";
-import VcModel from "../VcModel";
-import User from "../../models/User";
+import {VcModel} from "../VcModel";
 import EmailService from "../../services/EmailService";
 import AuthMessageTemplates from "../../MessageTemplates/AuthTemplates";
-
-export const enum EscalationsHandledBy {
-    UNIVERSITY = "UNIVERSITY",
-    I_STEM = "I_STEM",
-    NONE = "NONE",
-}
-export const enum DomainAccess {
-    AUTO = "AUTO",
-    MANUAL = "MANUAL",
-    NONE = "NONE",
-}
-
-export const enum UniversityRoles {
-    STUDENT = "STUDENT",
-    STAFF = "STAFF",
-    REMEDIATOR = "REMEDIATOR",
-}
-
-export const enum UniversityAccountStatus {
-    CREATED = "CREATED",
-    APPROVED = "APPROVED",
-    REJECTED = "REJECTED",
-}
+import {UniversityRoles, DomainAccess, DomainAccessStatus, UniversityAccountStatus, EscalationsHandledBy} from ".";
 
 class UniversityAccountLifecycleEvent {
     status: UniversityAccountStatus;
@@ -49,13 +24,6 @@ class UniversityAccountLifecycleEvent {
         this.status = status;
         this.actionAt = new Date();
     }
-}
-
-export const enum DomainAccessStatus {
-    VERIFIED = "VERIFIED",
-    NOT_VERIFIED = "NOT_VERIFIED",
-    PENDING = "PENDING",
-    REJECTED = "REJECTED",
 }
 
 class DomainAccessLifecycleEvent {
@@ -299,7 +267,7 @@ class UniversityModel {
             totalRequestsVc: 0,
             studentsUsingVc: 0,
         };
-        await User.find({
+        await UserDBModel.find({
             organizationCode: universityCode,
             role: UniversityRoles.STUDENT,
         })

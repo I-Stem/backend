@@ -3,11 +3,9 @@ import { Request, Response } from "express";
 import { createResponse, response } from "../../utils/response";
 import * as HttpStatus from "http-status-codes";
 import loggerFactory from "../../middlewares/WinstonLogger";
-import { UserType } from "../../domain/user";
-import UniversityModel, {
-    UniversityAccountStatus,
-    UniversityRoles,
-} from "../../domain/organization/OrganizationModel";
+import { UserType } from "../../domain/user/UserConstants";
+import UniversityModel  from "../../domain/organization/OrganizationModel";
+import {UniversityRoles, UniversityAccountStatus} from "../../domain/organization";
 import { UniversityStatus } from "./Auth/Login";
 import UserModel from "../../domain/user/User";
 

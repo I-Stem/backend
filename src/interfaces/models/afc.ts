@@ -3,7 +3,7 @@
  *
  */
 
-import { AFCTriggerer } from '../../domain/AfcModel';
+import { AFCTriggerer } from '../../domain/AfcModel/AFCConstants';
 
 export interface Status {
     status: Number;

@@ -3,11 +3,12 @@
  *
  */
 
-import AdminReviewModel, {
+import {AdminReviewModel} from "../domain/AdminReviewModel";
+ import {
     AdminReviewStatus,
     ReviewEnum,
     ReviewRequestType,
-} from "../domain/AdminReviewModel";
+} from "../domain/AdminReviewModel/AdminReviewConstants";
 import mongoose from "mongoose";
 import { ServiceRoleEnum } from "./User";
 

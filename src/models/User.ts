@@ -10,8 +10,8 @@ import Ledger from "./Ledger";
 import * as mongoose from "mongoose";
 import * as crypto from "crypto";
 import loggerFactory from "../middlewares/WinstonLogger";
-import { OAuthProvider, OtherUserRoles, UserType } from "../domain/user";
-import { UniversityRoles } from "../domain/organization/OrganizationModel";
+import { OAuthProvider, OtherUserRoles, UserType } from "../domain/user/UserConstants";
+import { UniversityRoles } from "../domain/organization";
 
 const mongooseFuzzySearching = require("mongoose-fuzzy-searching");
 const servicename = "User";

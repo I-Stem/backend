@@ -8,7 +8,8 @@ import loggerFactory from '../middlewares/WinstonLogger';
 import User, { IUserModel } from '../models/User';
 import ArchivedUser from '../models/ArchivedUser';
 import File from '../models/File';
-import VcModel, { VCRequestStatus } from '../domain/VcModel';
+import {VcModel} from '../domain/VcModel';
+import { VCRequestStatus } from '../domain/VcModel/VCConstants';
 import FileModel from '../domain/FileModel';
 import got from 'got';
 import emailService from '../services/EmailService';
@@ -16,7 +17,7 @@ import MessageModel, { MessageLabel } from '../domain/MessageModel';
 import ExceptionMessageTemplates, { ExceptionTemplateNames } from '../MessageTemplates/ExceptionTemplates';
 import { getFormattedJson } from '../utils/formatter';
 import VcResponseQueue from './VcResponse';
-import { DocType } from '../domain/AfcModel';
+import { DocType } from '../domain/AfcModel/AFCConstants';
 
 class VcRequestQueue {
     static servicename = 'VCRequestQueue';

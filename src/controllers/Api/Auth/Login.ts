@@ -14,11 +14,10 @@ import loggerFactory from "../../../middlewares/WinstonLogger";
 import { Http } from "winston/lib/winston/transports";
 import { packRules } from "@casl/ability/extra";
 import { abilitiesforUser } from "../../../middlewares/Abilities";
-import UserModel, { UserType } from "../../../domain/user/User";
-import UniversityModel, {
-    UniversityAccountStatus,
-    UniversityRoles,
-} from "../../../domain/organization/OrganizationModel";
+import UserModel from "../../../domain/user/User";
+import { UserType } from "../../../domain/user/UserConstants";
+import UniversityModel  from "../../../domain/organization/OrganizationModel";
+import {UniversityRoles, UniversityAccountStatus} from "../../../domain/organization";
 
 export const enum UniversityStatus {
     REGISTRATION_PENDING = "REGISTRATION_PENDING",

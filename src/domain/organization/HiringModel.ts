@@ -2,10 +2,9 @@ import { query } from "express";
 import loggerFactory from "../../middlewares/WinstonLogger";
 import JobPreferencesDbModel from "../../models/JobPreferences";
 import UserModel from "../user/User";
-import {
-    HiringAction,
-    HiringActionLog,
-} from "../Community/JobPreferencesModel";
+import {HiringAction} from "../Community/JobPreferencesModel/JobPreferencesConstants";
+import {HiringActionLog} from "../Community/JobPreferencesModel";
+
 import emailService from "../../services/EmailService";
 import JobApplicationTemplate from "../../MessageTemplates/JobApplicationTemplate";
 

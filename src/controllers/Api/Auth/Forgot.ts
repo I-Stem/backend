@@ -44,11 +44,13 @@ class ForgotController {
                 _passwordResetExpires
             );
             const _resetPasswordURL = `${req.body.resetPasswordURL}?resetToken=${_passwordResetToken}&email=${encodeURIComponent(_email)}`;
+
             user.updateOne(
                 {
                     passwordResetToken: _passwordResetToken,
                     passwordResetExpires: _passwordResetExpires
                 },
+                {},
                 (err) => {
                     if (err) {
                         logger.info('Internal server error occured in password reset.' + err);
@@ -71,6 +73,7 @@ class ForgotController {
                     );
                 }
             );
+
         });
     }
 }

@@ -3,7 +3,8 @@
  *
  */
 
-import { VCRequestStatus } from 'src/domain/VcModel';
+import { VCRequestStatus } from '../../domain/VcModel/VCConstants';
+
 
 export interface Status {
     status: Number;

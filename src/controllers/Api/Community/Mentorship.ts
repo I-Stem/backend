@@ -7,9 +7,10 @@ import { createResponse, response } from "../../../utils/response";
 import * as HttpStatus from "http-status-codes";
 import Mentorship from "../../../models/Mentorship";
 import loggerFactory from "../../../middlewares/WinstonLogger";
-import MentorshipModel, {
+import {MentorshipModel} from "../../../domain/Community/MentorshipModel";
+import {
     SignupAs,
-} from "../../../domain/Community/MentorshipModel";
+} from "../../../domain/Community/MentorshipModel/MentorshipConstants";
 import { plainToClass } from "class-transformer";
 import emailService from "../../../services/EmailService";
 import MentorshipTemplate from "../../../MessageTemplates/MentorshipTemplate";

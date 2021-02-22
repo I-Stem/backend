@@ -1,6 +1,7 @@
 import passport from "passport";
 import GoogleStrategy from "passport-google-oauth20";
-import UserModel, { getUserTypeFromString, OAuthProvider, UserType } from "../../../domain/user/User";
+import UserModel, { getUserTypeFromString} from "../../../domain/user/User";
+import {OAuthProvider, UserType } from "../../../domain/user/UserConstants";
 import loggerFactory from "../../../middlewares/WinstonLogger";
 import { InvitationEmailMismatchError, NoSuchUserError } from "../../../domain/user/UserDomainErrors";
 import {Request} from "express";

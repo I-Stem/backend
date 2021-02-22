@@ -5,7 +5,7 @@ import * as HttpStatus from "http-status-codes";
 import Escalation from "../../models/Escalation";
 
 import loggerFactory from "../../middlewares/WinstonLogger";
-import EscalationModel from "../../domain/EscalationModel";
+import {EscalationModel} from "../../domain/EscalationModel";
 import File from "../../models/File";
 
 class EscalationController {

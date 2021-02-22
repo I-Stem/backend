@@ -38,17 +38,17 @@ class FeedbackModel {
     dislikings: string = "";
     creditsRequested: number = 0;
 
-    persistFeedback(currUserId: string) {
+    async persistFeedback(currUserId: string) {
         const logger = loggerFactory(
             FeedbackModel.ServiceName,
             "persistFeedback"
         );
         this.userId = currUserId;
-        new FeedbackDbModel(this).save((err: any) => {
-            if (err) {
+        try {
+        await new FeedbackDbModel(this).save();
+        } catch (err) {
                 logger.error(err);
             }
-        });
     }
 
     public static async getFeedbacksByUser(

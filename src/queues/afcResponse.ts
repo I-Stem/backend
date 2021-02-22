@@ -4,12 +4,12 @@ import Form from "form-data";
 import Locals from "../providers/Locals";
 import loggerFactory from "../middlewares/WinstonLogger";
 import File from "../models/File";
-import AfcModel, { AFCRequestStatus, DocType } from "../domain/AfcModel";
+import {AfcModel} from "../domain/AfcModel";
+import { AFCRequestStatus, DocType, AFCTriggerer} from "../domain/AfcModel/AFCConstants";
 import LedgerModel from "../domain/LedgerModel";
 import MessageQueue from "./message";
 import { getFormattedJson } from "../utils/formatter";
 import Bull from "bull";
-import { AFCTriggerer } from "../domain/AfcModel";
 import emailService from "../services/EmailService";
 import ExceptionMessageTemplates, {
     ExceptionTemplateNames,

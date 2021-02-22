@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
-import { UniversityRoles } from "../domain/organization/OrganizationModel";
-import { UserType } from "../domain/user";
-import { InvitedUser, InvitedUserEnum } from "../domain/InvitedUserModel";
-
+import { UniversityRoles } from "../domain/organization";
+import { UserType } from "../domain/user/UserConstants";
+import { InvitedUserEnum } from "../domain/InvitedUserModel/InvitedUserConstants";
+import {InvitedUser} from "../domain/InvitedUserModel";
 const InvitedUserSchema = new mongoose.Schema(
     {
         email: { type: String, unique: true, lowercase: true, required: true },
@@ -50,7 +50,8 @@ const InvitedUserSchema = new mongoose.Schema(
 /**
  *  Populate InvitedUser with verify Token
  */
-InvitedUserSchema.pre("insertMany", function (next, docs) {
+
+InvitedUserSchema.pre("insertMany", function (docs, next) {
     docs.map((user: InvitedUser) => {
         const verifyToken = Buffer.from(
             (user.email + (Math.random() * 1000).toString).trim()

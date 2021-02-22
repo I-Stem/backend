@@ -45,7 +45,10 @@ class ResetController {
                     })
                 );
             }
-            user?.updateOne({ password: user.generatePassword(_password) }, (err) => {
+
+            user?.updateOne({ password: user.generatePassword(_password) }, 
+            {},
+            (err) => {
                 if (err) {
                     logger.error(`Internal error occurred. ${err}`);
                     return res.status(HttpStatus.BAD_GATEWAY).json(
@@ -62,6 +65,7 @@ class ResetController {
                     })
                 );
             });
+
         });
     }
 }

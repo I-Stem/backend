@@ -5,7 +5,7 @@
 
 import * as Joi from '@hapi/joi';
 import { join } from 'path';
-import VCModel, {VideoExtractionType, CaptionOutputFormat} from '../domain/VcModel';
+import {VideoExtractionType, CaptionOutputFormat} from '../domain/VcModel/VCConstants';
 
 const vcSchema = Joi.object({
     documentName: Joi.string().required(),

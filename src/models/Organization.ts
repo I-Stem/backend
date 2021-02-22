@@ -1,11 +1,11 @@
 import mongoose from "mongoose";
+import {University} from "../domain/organization/OrganizationModel";
 import {
-    University,
     DomainAccess,
     EscalationsHandledBy,
     UniversityAccountStatus,
     DomainAccessStatus,
-} from "../domain/organization/OrganizationModel";
+} from "../domain/organization";
 
 const allowedAccountStatuses = [
     UniversityAccountStatus.CREATED,

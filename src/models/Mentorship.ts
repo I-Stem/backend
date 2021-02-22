@@ -1,9 +1,10 @@
 import mongoose from "mongoose";
 import { type } from "os";
-import MentorshipModel, {
+import {MentorshipModel} from "../domain/Community/MentorshipModel";
+import {
     ConnectOften,
     SignupAs,
-} from "../domain/Community/MentorshipModel";
+} from "../domain/Community/MentorshipModel/MentorshipConstants";
 
 const MentorshipSchema = new mongoose.Schema(
     {
