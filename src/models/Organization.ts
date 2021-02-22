@@ -1,4 +1,3 @@
-import { string } from "@hapi/joi";
 import mongoose from "mongoose";
 import {
     University,
@@ -6,7 +5,7 @@ import {
     EscalationsHandledBy,
     UniversityAccountStatus,
     DomainAccessStatus,
-} from "../domain/UniversityModel";
+} from "../domain/organization/OrganizationModel";
 
 const allowedAccountStatuses = [
     UniversityAccountStatus.CREATED,
@@ -66,7 +65,7 @@ const UniversitySchema = new mongoose.Schema(
             },
         ],
         domainAccessRequestedBy: {
-            type: mongoose.Schema.Types.ObjectId
+            type: mongoose.Schema.Types.ObjectId,
         },
     },
     {
@@ -77,7 +76,8 @@ const UniversitySchema = new mongoose.Schema(
 );
 
 UniversitySchema.virtual("domainAccessStatus").get(function () {
-    return this.domainAccessStatusLog[this.domainAccessStatusLog.length - 1].status;
+    return this
+        .domainAccessStatusLog[this.domainAccessStatusLog.length - 1].status;
 });
 
 export default mongoose.model<University & mongoose.Document>(

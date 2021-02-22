@@ -11,7 +11,7 @@ import * as mongoose from "mongoose";
 import * as crypto from "crypto";
 import loggerFactory from "../middlewares/WinstonLogger";
 import { OAuthProvider, OtherUserRoles, UserType } from "../domain/user";
-import { UniversityRoles } from "../domain/UniversityModel";
+import { UniversityRoles } from "../domain/organization/OrganizationModel";
 
 const mongooseFuzzySearching = require("mongoose-fuzzy-searching");
 const servicename = "User";
@@ -112,8 +112,9 @@ export const UserSchema = new mongoose.Schema(
         },
         steam: { type: String },
         oauthProviderId: { type: String },
+        context: { type: String },
+        isContextualized: { type: Boolean, default: false },
         tokens: Array,
-
         organizationName: { type: String },
         organizationCode: { type: String },
         organisationAddress: { type: String },

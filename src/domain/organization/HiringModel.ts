@@ -67,15 +67,17 @@ class HiringModel {
             await JobPreferencesDbModel.findById(jobId)
                 .exec()
                 .then((candidate) => {
-                    const actionCount = candidate.actionLog.length;
-                    for (let i = 0; i < actionCount; i++) {
-                        if (
-                            candidate.actionLog[i].action ===
-                                HiringAction.COMMENTED &&
-                            candidate.actionLog[i].organization ===
-                                organizationCode
-                        ) {
-                            comments.push(candidate.actionLog[i]);
+                    if (candidate) {
+                        const actionCount = candidate.actionLog.length;
+                        for (let i = 0; i <= actionCount; i++) {
+                            if (
+                                candidate.actionLog[i].action ===
+                                    HiringAction.COMMENTED &&
+                                candidate.actionLog[i].organization ===
+                                    organizationCode
+                            ) {
+                                comments.push(candidate.actionLog[i]);
+                            }
                         }
                     }
                 });

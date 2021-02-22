@@ -80,9 +80,9 @@ export interface AFCRequestProps {
 class AfcModel implements AFCRequestProps {
     static serviceName = "AfcModel";
 
-    afcRequestId: string = "";
-    userId: string = "";
-    inputFileId: string = "";
+    afcRequestId: string;
+    userId: string;
+    inputFileId: string;
     outputURL?: string;
     documentName: string = "";
     pageCount?: number;
@@ -271,7 +271,11 @@ class AfcModel implements AFCRequestProps {
                 afcRequests.forEach((afc) => {
                     if (afc?.reviews?.length) {
                         if (
-                            !isNaN(Number(afc.reviews[afc.reviews.length - 1].ratings))
+                            !isNaN(
+                                Number(
+                                    afc.reviews[afc.reviews.length - 1].ratings
+                                )
+                            )
                         ) {
                             rating += Number(
                                 afc.reviews[afc.reviews.length - 1].ratings

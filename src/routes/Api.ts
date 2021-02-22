@@ -4,7 +4,6 @@
  */
 
 import { Router } from "express";
-import HomeController from "../controllers/Api/Home";
 import AuthRouter from "./Auth";
 import TagRouter from "./Tag";
 import AfcRouter from "./Afc";

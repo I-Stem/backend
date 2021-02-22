@@ -82,6 +82,7 @@ class Login {
                 );
             }
             logger.info(`Login Successful for ${req.body.email}`);
+            const token = Login.generateJWTTokenForUser(user);
             return createResponse(res, HttpStatus.OK, `Login successful`, {
                 user: {
                     email: user.email,
@@ -102,7 +103,9 @@ class Login {
                 token_expires_in: Locals.config().jwtExpiresIn * 60,
                 contextPath: await user.getFirstTimeContext(),
             });
-        } catch (error) {}
+        } catch (error) {
+            logger.error("Error occured: %o", error);
+        }
     }
 
     public static async checkIfOrganizationIsApproved(

@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
-import { UniversityRoles } from "../domain/UniversityModel";
+import { UniversityRoles } from "../domain/organization/OrganizationModel";
+import { UserType } from "../domain/user";
 import { InvitedUser, InvitedUserEnum } from "../domain/InvitedUserModel";
 
 const InvitedUserSchema = new mongoose.Schema(

@@ -10,15 +10,15 @@ import InvitedUserModel, {
 import UniversityModel, {
     DomainAccessStatus,
     UniversityAccountStatus,
-} from "../../domain/UniversityModel";
-import UserModel, { CardPreferences } from "../../domain/user/User";
-import emailService from "../../services/EmailService";
-import AuthMessageTemplates from "../../MessageTemplates/AuthTemplates";
+} from "../../../domain/organization/OrganizationModel";
+import UserModel, { CardPreferences } from "../../../domain/user/User";
+import emailService from "../../../services/EmailService";
+import AuthMessageTemplates from "../../../MessageTemplates/AuthTemplates";
 import AdminReviewModel, {
     AdminReviewStatus,
     ReviewEnum,
     ReviewRequestType,
-} from "../../domain/AdminReviewModel";
+} from "../../../domain/AdminReviewModel";
 
 class UniversityController {
     static servicename = "University Controller";
@@ -219,6 +219,7 @@ class UniversityController {
                         fullName: fullName,
                         rollNumber: rollNumber,
                         role: role,
+                        userType: userType,
                     });
                     newUsers.push(email);
                     logger.info(`Data: ${JSON.stringify(data)}`);

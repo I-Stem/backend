@@ -1,6 +1,6 @@
 import { Ability, AbilityBuilder, MongoQuery } from "@casl/ability";
-import { UniversityRoles } from "../domain/UniversityModel";
 import { OtherUserRoles } from "../domain/user";
+import { UniversityRoles } from "../domain/organization/OrganizationModel";
 import { ServiceRoleEnum, UserRoleEnum } from "../models/User";
 
 type Actions = "VIEW";

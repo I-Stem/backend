@@ -1,11 +1,22 @@
 import { createObjectCsvStringifier } from "csv-writer";
-import { saveStudentsReportCSV } from "../utils/file";
-import ServiceRequestTemplates from "../MessageTemplates/ServiceRequestTemplates";
+import { saveStudentsReportCSV } from "../../utils/file";
+import ServiceRequestTemplates from "../../MessageTemplates/ServiceRequestTemplates";
 import AdminReviewModel, {
     ReviewEnum,
     ReviewRequestType,
-} from "./AdminReviewModel";
-import ReportTemplate from "../MessageTemplates/ReportTemplate";
+} from "../AdminReviewModel";
+import ReportTemplate from "../../MessageTemplates/ReportTemplate";
+import loggerFactory from "../../middlewares/WinstonLogger";
+import UniversityDbModel from "../../models/Organization";
+import AfcModel from "../AfcModel";
+import FeedbackModel, { FeedbackCategory } from "../FeedbackModel";
+import FileModel from "../FileModel";
+import UserModel from "../user/User";
+import UserDBModel from "../../models/User";
+import VcModel from "../VcModel";
+import User from "../../models/User";
+import EmailService from "../../services/EmailService";
+import AuthMessageTemplates from "../../MessageTemplates/AuthTemplates";
 
 export const enum EscalationsHandledBy {
     UNIVERSITY = "UNIVERSITY",
@@ -201,7 +212,7 @@ class UniversityModel {
         ) {
             const user = await UserModel.getUserById(userId);
             if (user) {
-                emailService.notifyIStemTeam(
+                EmailService.notifyIStemTeam(
                     ServiceRequestTemplates.getDomainAccessRequest({
                         domainName: data.domain,
                         universityName: university.name,
@@ -393,9 +404,11 @@ class UniversityModel {
                         afcUserCount
                 );
                 metricsData.averageResolutionTimeAfc =
-                    metricsData.averageResolutionTimeAfc / metricsData.studentsUsingAfc;
+                    metricsData.averageResolutionTimeAfc /
+                    metricsData.studentsUsingAfc;
                 metricsData.averageResolutionTimeVc =
-                    metricsData.averageResolutionTimeVc / metricsData.studentsUsingVc;
+                    metricsData.averageResolutionTimeVc /
+                    metricsData.studentsUsingVc;
                 metricsData.averageRatingAfc =
                     metricsData.averageRatingAfc / afcUserCount;
                 metricsData.averageRatingVc =
@@ -525,7 +538,7 @@ class UniversityModel {
         );
         const user = await UserModel.getUserById(userId);
         if (user && upload_url) {
-            emailService.sendEmailToUser(
+            EmailService.sendEmailToUser(
                 user,
                 ReportTemplate.getGenerateReportForMetricsMessage({
                     url: upload_url,
@@ -567,7 +580,7 @@ class UniversityModel {
                 afcCompletedActivity,
                 afcActiveActivity,
             ]);
-            logger.info(`Student id: ${userId}`);
+            logger.info(`Student id: ${userId} `);
             return {
                 afcActivity: dataResolver[0],
                 vcActivity: dataResolver[1],

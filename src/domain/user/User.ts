@@ -516,6 +516,10 @@ class UserModel {
         return User.find({
             organizationCode,
             role,
+            $or: [
+                { fullname: new RegExp(searchString, "i") },
+                { rollNumber: new RegExp(searchString, "i") },
+            ],
         })
             .skip(offset)
             .limit(limit)

@@ -1,7 +1,7 @@
 import { getFormattedJson } from "../utils/formatter";
 import { InvitedUser } from "../domain/InvitedUserModel";
 import MessageModel, { MessageLabel } from "../domain/MessageModel";
-import UserModel from "../domain/user/User";
+import UserModel, { UserType } from "../domain/user/User";
 
 export const enum AuthMessageTemplateNames {
     ACCOUNT_EMAIL_VERIFICATION = "ACCOUNT_EMAIL_VERIFICATION",
@@ -17,6 +17,7 @@ export interface UserDetails {
     name: string;
     email?: string;
     organizationName?: string;
+    userType?: string;
 }
 
 export interface VerificationMessageProps extends UserDetails {
@@ -135,6 +136,15 @@ class AuthMessageTemplates {
     }
 
     public static getNewOrganizationRequestApprovalMessage(props: UserDetails) {
+        let businessMessage;
+        let employeeOrStudent;
+        if (props.userType === UserType.BUSINESS) {
+            employeeOrStudent = "employees";
+            businessMessage =
+                "<li>Hire people with disabilities from the I-Stem community.</li>";
+        } else {
+            employeeOrStudent = "students";
+        }
         return new MessageModel({
             isInternal: false,
             label: MessageLabel.INVITATION,
@@ -144,18 +154,19 @@ class AuthMessageTemplates {
             <p>Hello ${props.name}</p>
             <p>Welcome aboard!!</p>
             <p>Your request to create organization account for your organization ${props.organizationName} has been approved by I-Stem.</p>
-            <p>Now you could log into I-Stem portal and could try out the following things:</p>
-            <ul>
-            <li>Create a profile of your organization.</li>
-            <li>Can invite your colleagues as "staff" to manage administrative tasks.</li>
-            <li>Invite your students to access AI-powered I-Stem accommodation services.</li>
-            <li>Track  metrics about the different accommodation services used by student.</li>
-            <li>And much more!!</li>
-            </ul>
+<p>Now you could log into I-Stem portal and could try out the following things:</p>
+<ul>
+<li>Create a profile of your organization.</li>
+<li>Can invite your colleagues as "staff" to manage administrative tasks.</li>
+<li>Invite your ${employeeOrStudent} to access AI-powered I-Stem accommodation services.</li>
+<li>Track  metrics about the different accommodation services used by ${employeeOrStudent}.</li>
+${businessMessage}
+<li>And much more!!</li>
+</ul>
 
-            <p>If you face any problem or you have any suggestion/doubt, don't hesitate, reach out I-Stem team at info@inclusivestem.org. We are here to help.</p>
+<p>If you face any problem or you have any suggestion/doubt, don't hesitate, reach out I-Stem team at info@inclusivestem.org. We are here to help.</p>
 
-            <p>Team I-Stem</p>
+<p>Team I-Stem</p>
             `,
         });
     }

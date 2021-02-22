@@ -55,35 +55,14 @@ class RegisterController {
                 req.body.verifyToken,
                 req.body.verificationLink
             );
-            logger.info(`University: ${JSON.stringify(university)}`);
-            if (!persistedUser) {
-                return createResponse(
-                    res,
-                    HttpStatus.BAD_GATEWAY,
-                    "couldn't store user information"
-                );
-            }
-            if (university !== null && persistedUser.role === UniversityRoles.STUDENT) {
-                logger.info(`Updating user details for university student`);
-                UserModel.updateUserDetail(persistedUser.userId, {
-                    organizationCode: university.code,
-                    userType: UserType.UNIVERSITY,
-                    role: UniversityRoles.STUDENT,
-                    organizationName: university.name,
-                });
-                logger.info(`${JSON.stringify(user)}, ${persistedUser.userId}`);
-            }
-
-            if (req.body.verifyToken) {
-                const isUserValid = await InvitedUserModel.checkInvitedUser(
-                    _email,
-                    req.body.verifyToken
-                );
-                if (isUserValid) {
-                    logger.info(`Adding invited user`);
-                    InvitedUserModel.updateStatus(
-                        _email,
-                        InvitedUserEnum.REGISTERED
+        } catch (error) {
+            logger.error("Bad Request: %o", error);
+            switch (error.name) {
+                case UserDomainErrors.UserAlreadyRegisteredError:
+                    return createResponse(
+                        res,
+                        HttpStatus.CONFLICT,
+                        `Account already exists. Please sign in to your account.`
                     );
                     break;
 
@@ -213,3 +192,87 @@ class RegisterController {
 }
 
 export default RegisterController;
+
+/** Merge conflict
+ * 
+ * try {
+            const existingUser = await UserModel.findUserByEmail(_email);
+
+            if (existingUser) {
+                logger.error(`Existing account - ${existingUser.email}`);
+                return createResponse(
+                    res,
+                    HttpStatus.CONFLICT,
+                    `Account already exists. Please sign in to your account.`
+                );
+            }
+
+            const persistedUser = await user.persist();
+            const domainName = _email.split("@")[1];
+            const university = await UniversityModel.findUniversityByDomainName(
+                domainName
+            );
+            logger.info(`University: ${JSON.stringify(university)}`);
+            if (!persistedUser) {
+                return createResponse(
+                    res,
+                    HttpStatus.BAD_GATEWAY,
+                    "couldn't store user information"
+                );
+            }
+            if (university !== null && persistedUser.role === UniversityRoles.STUDENT) {
+                logger.info(`Updating user details for university student`);
+                UserModel.updateUserDetail(persistedUser.userId, {
+                    organizationCode: university.code,
+                    userType: UserType.UNIVERSITY,
+                    role: UniversityRoles.STUDENT,
+                    organizationName: university.name,
+                });
+                logger.info(`${JSON.stringify(user)}, ${persistedUser.userId}`);
+            }
+
+            if (req.body.verifyToken) {
+                const isUserValid = await InvitedUserModel.checkInvitedUser(
+                    _email,
+                    req.body.verifyToken
+                );
+                if (isUserValid) {
+                    logger.info(`Adding invited user`);
+                    InvitedUserModel.updateStatus(
+                        _email,
+                        InvitedUserEnum.REGISTERED
+                    );
+
+                    try {
+                        const invitedUserData = await InvitedUserModel.getInvitedUserByEmail(
+                            _email
+                        );
+                        if (invitedUserData) {
+                            if (
+                                invitedUserData.role == UniversityRoles.STUDENT
+                            ) {
+                                persistedUser?.changeUserRole(
+                                    UniversityRoles.STUDENT
+                                );
+                            } else {
+                                persistedUser.changeUserRole(
+                                    UniversityRoles.STAFF
+                                );
+                            }
+                            persistedUser.updateUserOrganizationCode(
+                                invitedUserData.university
+                            );
+                            persistedUser.updateVerificationStatus(true);
+                        }
+                    } catch (err) {
+                        logger.error("Error occured: %o", err);
+                    }
+
+                    LedgerModel.createCreditTransaction(
+                        persistedUser.userId,
+                        Locals.config().invitedUserCredits,
+                        "Successful verification"
+                    );
+                } else {
+                    logger.error(`Invalid email or verification token,`);
+ */
