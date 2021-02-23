@@ -1,7 +1,7 @@
 /**
  * University Portal Routes
  */
-import UniversityController from "../controllers/Api/University";
+import UniversityController from "../controllers/Api/organization/Organization";
 import { createValidator, ValidatedRequest } from "express-joi-validation";
 import University from "../validators/University";
 import { UniversityRequestSchema } from "../interfaces/validators/university";
@@ -41,14 +41,18 @@ router.post(
     }
 );
 
-router.get(
+router.post(
     "/organ/req/:organizationCode/:action",
     UniversityController.handleRequest
 );
 
 router.post("/index/student/update", UniversityController.updateStudentDetails);
 
-router.post("/onboardCards", UniversityController.updateUniversityCards);
+router.post("/onboardCards", UniversityController.updateUserCardsPreferences);
+
+router.get("/emailReport", UniversityController.downloadData);
+
+router.post("/domainAcess/:action", UniversityController.updateAutoDomainAccess)
 
 router.get("/studentsCount", UniversityController.studentsCount);
 export default router;

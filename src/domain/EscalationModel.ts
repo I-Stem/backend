@@ -3,20 +3,34 @@ import emailService from "../services/EmailService";
 import { getFormattedJson } from "../utils/formatter";
 import loggerFactory from "../middlewares/WinstonLogger";
 import EscalationDbModel from "../models/Escalation";
-import AfcModel, { AFCRequestOutputFormat } from "./AfcModel";
+import AfcModel, { AFCRequestOutputFormat, AFCRequestStatus } from "./AfcModel";
 import FileModel from "./FileModel";
 import UserModel from "./user/User";
-import VcModel, { VideoExtractionType } from "./VcModel";
+import VcModel, { VCRequestStatus, VideoExtractionType } from "./VcModel";
 import AfcResponseQueue from "../queues/afcResponse";
 import User from "../models/User";
-import UniversityModel from "./UniversityModel";
+import UniversityModel from "./organization/OrganizationModel";
 
 export const enum AIServiceCategory {
-    AFC = "afc",
-    VC = "vc",
-    NONE = "none",
+    AFC = "AFC",
+    VC = "VC",
+    NONE = "NONE",
 }
 
+export const enum EscalationStatus {
+    UNASSIGNED = "UNASSIGNED",
+    RESOLVED = "RESOLVED",
+    INPROGRESS = "IN_PROGRESS",
+}
+
+class EscalationStatusLifeCycle {
+    status: EscalationStatus;
+    actionAt: Date;
+    constructor(status: EscalationStatus) {
+        this.actionAt = new Date();
+        this.status = status;
+    }
+}
 export interface EscalationProps {
     escalationId?: string;
     _id?: string;
@@ -32,9 +46,13 @@ export interface EscalationProps {
     videoPortions?: string[];
     escalatorOrganization?: string;
     createdAt?: Date;
+    description?: string;
+    status: EscalationStatus;
+    statusLog?: EscalationStatusLifeCycle[];
+    docOutputFileUrl?: string;
 }
 
-class EscalationModel {
+class EscalationModel implements EscalationProps {
     static serviceName = "EscalationModel";
 
     escalationId?: string;
@@ -50,6 +68,10 @@ class EscalationModel {
     videoPortions: string[] = [];
     escalatorOrganization?: string;
     createdAt?: Date;
+    description?: string;
+    status: EscalationStatus;
+    statusLog?: EscalationStatusLifeCycle[];
+    docOutputFileUrl?: string;
 
     constructor(props: EscalationProps) {
         this.escalationId = props.escalationId || props._id || "";
@@ -65,13 +87,22 @@ class EscalationModel {
         this.videoPortions = props.videoPortions || [];
         this.escalatorOrganization = props.escalatorOrganization;
         this.createdAt = props.createdAt;
+        this.description = props.description;
+        this.status = props.status;
+        this.statusLog = props.statusLog;
+        this.docOutputFileUrl = props.docOutputFileUrl;
     }
 
     public async persist() {
         const logger = loggerFactory(EscalationModel.serviceName, "persist");
 
         try {
-            const escalation = await new EscalationDbModel(this).save();
+            this.statusLog = [];
+            this.statusLog.push(new EscalationStatusLifeCycle(this.status));
+            logger.info(
+                "Escalating file with sourceFileId" + this.sourceFileId
+            );
+            await new EscalationDbModel(this).save();
         } catch (error) {
             logger.error("error occurred while persisting escalation request");
         }
@@ -90,22 +121,59 @@ class EscalationModel {
                 escalationId,
                 {
                     remediatedFileURL,
-                }
+                },
+                { new: true }
             ).exec();
-            return escalation;
+            if (escalation?.remediatedFileURL) {
+                if (
+                    escalation?.escalationForService === AIServiceCategory.AFC
+                ) {
+                    await AfcModel.updateEscalatedAfcRequestWithRemediatedFile(
+                        escalation.serviceRequestId,
+                        escalation.remediatedFileURL
+                    );
+                    await AfcModel.updateAfcStatusById(
+                        escalation.serviceRequestId,
+                        AFCRequestStatus.ESCALATION_RESOLVED
+                    );
+                } else if (
+                    escalation?.escalationForService === AIServiceCategory.VC
+                ) {
+                    await VcModel.updateEscalatedVcRequestWithRemediatedFile(
+                        escalation.serviceRequestId,
+                        escalation.remediatedFileURL
+                    );
+                    await VcModel.updateVcStatusById(
+                        escalation.serviceRequestId,
+                        VCRequestStatus.ESCALATION_RESOLVED
+                    );
+                }
+                await EscalationModel.updateEscalationStatus(
+                    escalation?.id,
+                    EscalationStatus.RESOLVED
+                );
+            }
         } catch (error) {
-            logger.error("error occured while updating resolver");
+            logger.error(
+                `error occured while updating remediated file:" ${error}`
+            );
         }
     }
 
-    public static updateResolver(escalationId: string, userId: string) {
+    public static async updateResolver(escalationId: string, userId: string) {
         const logger = loggerFactory(
             EscalationModel.serviceName,
             "updateResolver"
         );
         try {
-            EscalationDbModel.findByIdAndUpdate(escalationId, {
+            await EscalationDbModel.findByIdAndUpdate(escalationId, {
                 resolverId: userId,
+                status: EscalationStatus.INPROGRESS,
+                $push: {
+                    statusLog: new EscalationStatusLifeCycle(
+                        EscalationStatus.INPROGRESS
+                    ),
+                },
             }).exec();
         } catch (error) {
             logger.error("error occured while updating resolver");
@@ -124,6 +192,23 @@ class EscalationModel {
                 const file = await FileModel.getFileById(
                     escalation.sourceFileId || ""
                 );
+                let assignedOn: any = "";
+                if (escalation.statusLog) {
+                    escalation.statusLog.forEach((status) => {
+                        if (status.status === EscalationStatus.INPROGRESS) {
+                            assignedOn = status.actionAt;
+                        }
+                    });
+                }
+                let assignedTo: any;
+                try {
+                    const user = await UserModel.getUserById(
+                        escalation?.resolverId || ""
+                    );
+                    assignedTo = user?.fullname;
+                } catch (err) {
+                    assignedTo = "";
+                }
                 let request: any = "";
                 if (escalation.escalationForService === AIServiceCategory.AFC) {
                     request = await AfcModel.getAfcModelById(
@@ -144,6 +229,10 @@ class EscalationModel {
                     escalationId: escalation._id,
                     documentName: request.documentName,
                     sourceFileUrl: file?.inputURL,
+                    description: escalation?.description || "",
+                    docOutputFileUrl: escalation?.docOutputFileUrl,
+                    assignedOn,
+                    assignedTo,
                 };
             } else logger.error("couldn't find escalation by id: " + id);
         } catch (error) {
@@ -154,7 +243,9 @@ class EscalationModel {
     }
 
     public static async getEscalationsByOrganization(
-        escalatorOrganization: any
+        escalatorOrganization: string,
+        status: string | EscalationStatus,
+        service: string | AIServiceCategory
     ): Promise<any[]> {
         const logger = loggerFactory(
             EscalationModel.serviceName,
@@ -162,9 +253,32 @@ class EscalationModel {
         );
         const escalationsData: any[] = [];
         try {
-            const escalations = await EscalationDbModel.find({
+            const escalationsQuery = EscalationDbModel.find({
                 escalatorOrganization,
-            });
+            }).sort({ updatedAt: -1 });
+            if (
+                service.toUpperCase() === "ALL" &&
+                status.toUpperCase() !== "ALL"
+            ) {
+                escalationsQuery.where("status").equals(status);
+            } else if (
+                (service.toUpperCase() === AIServiceCategory.AFC ||
+                    service.toUpperCase() === AIServiceCategory.VC) &&
+                status.toUpperCase() !== "ALL"
+            ) {
+                escalationsQuery
+                    .where("escalationForService")
+                    .equals(service)
+                    .where("status")
+                    .equals(status);
+            } else if (
+                status.toUpperCase() === "ALL" &&
+                service.toUpperCase() !== "ALL"
+            ) {
+                escalationsQuery.where("escalationForService").equals(service);
+            }
+            const escalations = await escalationsQuery;
+
             for (let i = 0; i < escalations.length; ++i) {
                 let resolverName = "";
                 try {
@@ -175,9 +289,6 @@ class EscalationModel {
                 } catch (err) {
                     resolverName = "";
                 }
-                const sourceFile = FileModel.getFileById(
-                    escalations[i].sourceFileId
-                );
                 let request: any;
                 if (
                     escalations[i].escalationForService ===
@@ -191,7 +302,7 @@ class EscalationModel {
                         escalations[i].serviceRequestId
                     );
                 }
-                const dataResolver = await Promise.all([request, sourceFile]);
+                const dataResolver = await Promise.all([request]);
                 escalationsData.push({
                     documentName: dataResolver[0]?.documentName,
                     escalationId: escalations[i]._id,
@@ -201,7 +312,7 @@ class EscalationModel {
                     pageRanges: escalations[i].pageRanges,
                     videoPortions: escalations[i].videoPortions,
                     escalationForService: escalations[i].escalationForService,
-                    sourceFileUrl: dataResolver[1]?.inputURL,
+                    status: escalations[i].status,
                 });
             }
         } catch (error) {
@@ -268,7 +379,7 @@ class EscalationModel {
         const escalator = await UserModel.getUserById(afcRequest.userId);
 
         if (escalator !== null) {
-            let outputFileURL = afcRequest.outputURL;
+            let docOutputFileUrl = afcRequest.outputURL;
             if (afcRequest.outputFormat !== AFCRequestOutputFormat.WORD) {
                 logger.info(
                     "creating docx output format for escalation resolving team"
@@ -279,10 +390,24 @@ class EscalationModel {
                             ...afcRequest,
                             outputFormat: AFCRequestOutputFormat.WORD,
                         }),
-                        sourceFile
+                        sourceFile,
+                        "escalation"
                     );
-                    outputFileURL = result.url;
+                    docOutputFileUrl = result.url;
+                    await EscalationDbModel.findOneAndUpdate(
+                        {
+                            serviceRequestId: this.serviceRequestId,
+                        },
+                        {
+                            $set: {
+                                docOutputFileUrl,
+                            },
+                        }
+                    );
                 } catch (error) {
+                    afcRequest.changeStatusTo(
+                        AFCRequestStatus.ESCALATION_REQUESTED
+                    );
                     logger.error("couldn't create docx format");
                 }
             }
@@ -296,7 +421,7 @@ class EscalationModel {
                     escalatorName: escalator.fullname,
                     pageRanges: escalatedPageRange,
                     inputFileURL: sourceFile.inputURL,
-                    docOutputFileURL: outputFileURL || "",
+                    docOutputFileURL: docOutputFileUrl || "",
                 })
             );
         } else {
@@ -349,6 +474,52 @@ class EscalationModel {
             escalatorId: userId,
             escalationForService: AIServiceCategory.VC,
         }).exec();
+    }
+
+    public static async updateEscalationStatus(
+        escalationId: string,
+        status: EscalationStatus
+    ): Promise<any> {
+        const logger = loggerFactory(
+            EscalationModel.serviceName,
+            "updateEscalationStatus"
+        );
+        logger.info(
+            `Updating escalation status to ${status} for id: ${escalationId}`
+        );
+        await EscalationDbModel.findByIdAndUpdate(escalationId, {
+            status,
+            $push: {
+                statusLog: new EscalationStatusLifeCycle(status),
+            },
+        }).exec();
+    }
+
+    public static async checkForEscalatedFile(
+        sourceFileId: string
+    ): Promise<string | null> {
+        const logger = loggerFactory(
+            EscalationModel.serviceName,
+            "checkForEscalatedFile"
+        );
+        try {
+            const result = await EscalationDbModel.findOne({ sourceFileId });
+            if (result?.escalationForService === AIServiceCategory.AFC) {
+                if (
+                    result?.docOutputFileUrl !== undefined &&
+                    result?.remediatedFileURL !== undefined
+                ) {
+                    return result.remediatedFileURL;
+                }
+            } else {
+                if (result?.remediatedFileURL !== undefined) {
+                    return result.remediatedFileURL;
+                }
+            }
+        } catch (err) {
+            logger.error("Error occured while finding source file %o" + err);
+        }
+        return null;
     }
 }
 

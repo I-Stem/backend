@@ -1,11 +1,11 @@
 class ReviewModel {
     serviceRequestId: string = '';
-    rating: number;
+    ratings: number;
     text: string;
 
-    constructor(serviceRequestId: string, rating: number, text: string) {
+    constructor(serviceRequestId: string, ratings: number, text: string) {
         this.serviceRequestId = serviceRequestId;
-        this.rating = rating;
+        this.ratings = ratings;
         this.text = text;
             }
 

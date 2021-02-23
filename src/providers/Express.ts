@@ -10,7 +10,7 @@ import Routes from './Routes';
 import Bootstrap from '../middlewares/Kernel';
 import ExceptionHandler from '../exceptions/Handler';
 import Verify from '../queues/verify';
-import AfcProcessQueue from '../queues/afcProcessQueue';
+import ProcessQueue from '../queues/processQueue';
 import loggerFactory from '../middlewares/WinstonLogger';
 import { httpLogger } from '../middlewares/HttpLogger';
 import { http } from 'winston';
@@ -75,11 +75,14 @@ class Express {
         
     }
 
-    private mountAfcCron(): void {
-        const methodname = 'mountAfcCron';
+    /**
+     * Mounts process cron for AFC and VC
+     */
+    private mountProcessCron(): void {
+        const methodname = 'mountProcessCron';
         const logger = loggerFactory.call(this, Express.servicename, methodname);
-        logger.info('Retrieving status of AFC Requests...');
-        AfcProcessQueue.dispatch();
+        logger.info('Retrieving status of AFC and VC Requests...');
+        ProcessQueue.dispatch();
     }
 
     /**
@@ -101,7 +104,7 @@ class Express {
         // Start the server on the specified port
         this.express.listen(port, () => {
             this.mountCron();
-            this.mountAfcCron();
+            this.mountProcessCron();
             return logger.info(`Server :: Running @ 'http://localhost:${port}'`);
         }).on('error', (e: any) => {
             if (e.code === 'EADDRINUSE') {

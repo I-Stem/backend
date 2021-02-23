@@ -1,83 +1,78 @@
-import User, { ServiceRoleEnum, UserRoleEnum } from "../../../models/User";
 import passport from "passport";
 import GoogleStrategy from "passport-google-oauth20";
-import UserModel, { OAuthProvider, UserType } from "../../../domain/user/User";
+import UserModel, { getUserTypeFromString, OAuthProvider, UserType } from "../../../domain/user/User";
 import loggerFactory from "../../../middlewares/WinstonLogger";
-import LedgerModel from "../../../domain/LedgerModel";
-import Locals from "../../../providers/Locals";
-import emailService from "../../../services/EmailService";
-import AuthMessageTemplates from "../../../MessageTemplates/AuthTemplates";
-import UniversityModel, {
-    UniversityRoles,
-} from "../../../domain/UniversityModel";
 import { InvitationEmailMismatchError, NoSuchUserError } from "../../../domain/user/UserDomainErrors";
+import {Request} from "express";
 
-class GoogleLogin {
-    static servicename = "GoogleLogin";
-    public static googleOAuth(): any {
-        const methodname = "googleOAuth";
-        const logger = loggerFactory(GoogleLogin.servicename, methodname);
-        passport.use(
-            new GoogleStrategy.Strategy(
+class PassportStrategies {
+    static servicename = "PassportStrategies";
+    public static getGoogleStrategy() {
+        const logger = loggerFactory(PassportStrategies.servicename, "getGoogleStrategy");
+
+            return new GoogleStrategy.Strategy(
                 {
                     clientID: process.env.GOOGLE_ID || "",
                     clientSecret: process.env.GOOGLE_SECRET || "",
                     callbackURL: `${process.env.APP_URL}/api/auth/google/redirect`,
-                    proxy: true,
+                    scope: ["profile", "email"],
                     passReqToCallback:true
                 },
                 async (req, token, refreshToken, profile, done) => {
-                    logger.info("request cookies by parser in strategy callback: %o", req.cookies);
-                    logger.info("raw request cookies in callback: %o", req.headers.cookie)
+logger.info("query string param in strategy: %o", req?.query);
 
-                    if(req.cookies.invitationEmail || req.cookies.invitationToken) {
-                        if( req.cookies.invitationEmail?.toLowerCase()
+const userData = JSON.parse(Buffer.from(req.query.state?.toString() || "", "base64").toString("ascii"));
+                    if(userData.invitationEmail || userData.invitationToken) {
+                        if( userData.invitationEmail?.toLowerCase()
                         !==
                         profile._json.email.toString().toLowerCase()) {
-                        done(new InvitationEmailMismatchError("Invitation email: " + req.cookies.invitationEmail + " doesn't match with provided email: " + profile._json.email), undefined);
+                        done(new InvitationEmailMismatchError("Invitation email: " + userData.invitationEmail + " doesn't match with provided email: " + profile._json.email), undefined);
                         return;
                         }
                     }
+
                     const user = await UserModel.findUserByEmail(profile._json.email);
                     if (user) {
+                        logger.info("user found with: " + user.email);
                         done(undefined, user);
-                    } else if(req.cookies.liprodAuthFlow ?.toLowerCase() === "login") {
+                    } else if(userData.authFlow?.toString()?.toLowerCase() === "login") {
    logger.info("trying to signin with nonexisting email: " + profile._json.email);
    done(new NoSuchUserError(`No account exist with provided email id: ${profile._json.email}, Please create an account first.`), undefined);
                     }
                     else {
                         try {
+                            const userType = getUserTypeFromString(userData.userType);
                         const newUser = await UserModel.registerUser({
                             email: profile._json.email,
                             fullname: profile.displayName,
-                            userType: req.cookies.userType,
-                            role: UserModel.getDefaultUserRoleForUserType(req.cookies.userType),
-                            serviceRole: UserModel.getDefaultServiceRoleForUser(req.cookies.userType),
+                            userType: userType,
+                            role: UserModel.getDefaultUserRoleForUserType(userType),
+                            serviceRole: UserModel.getDefaultServiceRoleForUser(userType),
                             isVerified: true,
                             organizationCode: UserModel.generateOrganizationCodeFromUserTypeAndOrganizationName(
-                                req.cookies.userType,
+                                userType,
                                 profile.displayName,
                                 ),
                                 oauthProvider: OAuthProvider.GOOGLE,
-                                oauthProviderId: profile.id
+                                oauthProviderId: profile.id,
+                                context: userData.context,
+                                isContextualized: false
                         },
-                        req.cookies.invitationToken, undefined);
+                        userData.invitationToken?.toString(), undefined);
 
+                        logger.info(                            `Successfully registered ${profile._json.email}`);
                                 done(undefined, newUser ? newUser : undefined);
                         } catch (error) {
                             logger.error("Bad Request: %o", error);
                             done(error, undefined);
                         }
-                        logger.info(
-                            `Successfully registered ${profile._json.email}`
-                        );
 
                     }
 
                 }
             )
-        );
+
 
     }
 }
-export default GoogleLogin;
+export default PassportStrategies;

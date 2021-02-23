@@ -3,7 +3,10 @@ import loggerFactory from "../middlewares/WinstonLogger";
 import InvitedUserDbModel from "../models/InvitedUser";
 import AuthMessageTemplates from "../MessageTemplates/AuthTemplates";
 import Locals from "../providers/Locals";
-import UniversityModel, { UniversityRoles } from "./UniversityModel";
+import UniversityModel, {
+    UniversityRoles,
+} from "./organization/OrganizationModel";
+import { UserType } from "../domain/user/User";
 
 export interface StudentDetail {
     NAME: string | null;
@@ -27,6 +30,7 @@ export interface InvitedUser {
     userId?: string;
     rollNumber?: string;
     role: UniversityRoles;
+    userType: UserType;
 }
 
 class InvitedUserModel {
@@ -39,6 +43,7 @@ class InvitedUserModel {
     userId: string;
     rollNumber: string;
     role: UniversityRoles;
+    userType: UserType;
 
     constructor(props: InvitedUser) {
         this.email = props.email;
@@ -49,6 +54,7 @@ class InvitedUserModel {
         this.userId = props.userId || props._id || "";
         this.rollNumber = props.rollNumber || "";
         this.role = props.role;
+        this.userType = props.userType;
     }
 
     static async persistInvitedUser(userData: InvitedUser[]) {
@@ -64,7 +70,9 @@ class InvitedUserModel {
                     if (portalUrl) {
                         const verificationLink = `${portalUrl}/register/student?email=${encodeURIComponent(
                             user.email
-                        )}&verificationToken=${user.verifyToken}`;
+                        )}&verificationToken=${user.verifyToken}&userType=${
+                            user.userType
+                        }`;
                         InvitedUserModel.sendEmailToUser(
                             verificationLink,
                             user
@@ -85,22 +93,24 @@ class InvitedUserModel {
     }
 
     static async checkInvitedUser(email: string, verifyToken: string) {
-        const logger = loggerFactory(InvitedUserModel.servicename, "checkInvitedUser");
+        const logger = loggerFactory(
+            InvitedUserModel.servicename,
+            "checkInvitedUser"
+        );
         let valid = false;
         try {
-        const user = await InvitedUserDbModel.findOne({ email }).lean();
+            const user = await InvitedUserDbModel.findOne({ email }).lean();
 
-                if (
-                    user?.verifyToken === verifyToken &&
-                    user.isRegistered === false
-                ) {
-                    logger.info("valid invited user: " + email);
-                    valid = true;
-                }
+            if (
+                user?.verifyToken === verifyToken &&
+                user.isRegistered === false
+            ) {
+                logger.info("valid invited user: " + email);
+                valid = true;
             }
-            catch (error) {
-                logger.error("error: %o", error);
-            }
+        } catch (error) {
+            logger.error("error: %o", error);
+        }
         return valid;
     }
 
