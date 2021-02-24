@@ -4,9 +4,6 @@
  */
 
 import { Router } from "express";
-import * as jwt from "jsonwebtoken";
-import { packRules } from "@casl/ability/extra";
-import { abilitiesforUser } from "../middlewares/Abilities";
 import expressJwt from "express-jwt";
 import { createValidator, ValidatedRequest } from "express-joi-validation";
 import Locals from "../providers/Locals";
@@ -32,11 +29,10 @@ import ResetSchema from "../validators/Reset";
 import { VerifyUserSchema } from "../interfaces/validators/verify";
 import VerifySchema from "../validators/Verify";
 import loggerFactory from "../middlewares/WinstonLogger";
-import GoogleLogin from "../controllers/Api/Auth/passportStrategies";
+import PassportStrategies from "../controllers/Api/Auth/passportStrategies";
 import passport from "passport";
-import { tokenToString } from "typescript";
-import { profile } from "winston";
-GoogleLogin.googleOAuth();
+import { getFormattedJson } from "../utils/formatter";
+
 const router = Router();
 
 
@@ -98,18 +94,26 @@ router.post(
     }
 );
 
+passport.use(PassportStrategies.getGoogleStrategy());
+
 router.get(
     "/google",
-    cookieParser(), 
-    passport.authenticate("google", {
-        scope: ["profile", "email"],
-        accessType : "offline",
-    })
-);
+    (req, res) => {
+        passport.authenticate("google", {
+            session: false,
+            accessType: "offline",
+            state: Buffer.from(JSON.stringify(req.query)).toString('base64')
+        })(req, res);
+            });
+
 router.get("/google/redirect", 
-cookieParser(),
- async (req, res, next) => {
-await RegisterController.handleLoginOrRegistrationByOAuth(req, res, "google");
+async (req, res) => {
+        passport.authenticate("google", {
+        session: false,
+        accessType: "offline"
+    },
+    await RegisterController.handleLoginOrRegistrationByOAuth(res)
+    )(req, res);
 });
 
 export default router;

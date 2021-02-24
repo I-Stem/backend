@@ -6,7 +6,10 @@ import ReviewModel from "./ReviewModel";
 import UserModel from "./user/User";
 import EmailService from "../services/EmailService";
 import ServiceRequestTemplates from "../MessageTemplates/ServiceRequestTemplates";
-import got from "got/dist/source";
+import { getVideoDurationInSeconds } from "get-video-duration";
+import { getFormattedJson } from "../utils/formatter";
+import ExceptionMessageTemplates from "../MessageTemplates/ExceptionTemplates";
+import FileModel from "./FileModel";
 
 export const enum VideoExtractionType {
     CAPTION = "CAPTION",
@@ -31,6 +34,8 @@ export const enum VCRequestStatus {
     COMPLETED = "COMPLETED",
     ESCALATION_REQUESTED = "ESCALATION_REQUESTED",
     ESCALATION_RESOLVED = "ESCALATION_RESOLVED",
+    RETRY_REQUESTED = "RETRY_REQUESTED",
+    RESOLVED_FILE_USED = "RESOLVED_FILE_USED",
 }
 
 export class VCRequestLifecycleEvent {
@@ -59,6 +64,7 @@ export interface VCProps {
     status: VCRequestStatus;
     statusLog?: VCRequestLifecycleEvent[];
     outputFormat?: CaptionOutputFormat;
+    expiryTime?: Date;
 }
 
 class VcModel {
@@ -78,6 +84,7 @@ class VcModel {
     status: VCRequestStatus;
     statusLog?: VCRequestLifecycleEvent[];
     outputFormat?: CaptionOutputFormat;
+    expiryTime?: Date;
 
     constructor(props: VCProps) {
         this.vcRequestId = props.vcRequestId || props._id || "";
@@ -96,9 +103,10 @@ class VcModel {
             new VCRequestLifecycleEvent(props.status),
         ];
         this.outputFormat = props.outputFormat || CaptionOutputFormat.TXT;
+        this.expiryTime = props.expiryTime;
     }
 
-    async persist(): Promise<boolean> {
+    async persist(): Promise<boolean | VcModel> {
         const logger = loggerFactory(VcModel.serviceName, "persist");
         logger.info("persisting vc request data: %o", this);
         try {
@@ -106,12 +114,11 @@ class VcModel {
                 await new VcDbModel(this).save()
             ).execPopulate();
             this.vcRequestId = vcSaved._id;
+            return this;
         } catch (error) {
             logger.error("error occurred while persisting: %o", error);
             return false;
         }
-
-        return true;
     }
 
     public async changeStatusTo(newStatus: VCRequestStatus) {
@@ -139,7 +146,7 @@ class VcModel {
         const request = await VcDbModel.find({ userId }).lean();
         let totalTime = 0;
         request.forEach((element: any) => {
-            totalTime += (element.updatedAt - element.createdAt);
+            totalTime += element.updatedAt - element.createdAt;
         });
         logger.info(
             `Average resolution time for ${userId}: ${
@@ -245,14 +252,18 @@ class VcModel {
     }
 
     public static async getAllVcActivityForUser(userId: string) {
-        return VcDbModel.find({ userId: userId }).lean();
+        return VcDbModel.find({ userId: userId })
+            .sort({ createdAt: -1 })
+            .lean();
     }
 
     public static async getCompletedVcRequestForUser(userId: string) {
         return VcDbModel.find({
             userId,
             status: VCRequestStatus.COMPLETED,
-        }).lean();
+        })
+            .sort({ createdAt: -1 })
+            .lean();
     }
 
     public static async getEscalatedVcRequestForUser(userId: string) {
@@ -266,14 +277,18 @@ class VcModel {
                     ],
                 },
             ],
-        }).lean();
+        })
+            .sort({ createdAt: -1 })
+            .lean();
     }
 
     public static async getActiveVcRequestForUser(userId: string) {
         return VcDbModel.find({
             userId,
             status: { $ne: VCRequestStatus.COMPLETED },
-        }).lean();
+        })
+            .sort({ createdAt: -1 })
+            .lean();
     }
 
     public static async getVcRatingCountForUser(userId: string) {
@@ -282,15 +297,118 @@ class VcModel {
         await VcDbModel.find({ userId: userId })
             .exec()
             .then((vcRequest) => {
-                
                 vcRequest.forEach((vc) => {
                     if (vc?.reviews?.length) {
-                        count = vc?.reviews?.length;
-                        rating += Number(vc.reviews[vc.reviews.length - 1].rating);
+                        if (
+                            !isNaN(
+                                Number(
+                                    vc.reviews[vc.reviews.length - 1].ratings
+                                )
+                            )
+                        ) {
+                            count += 1;
+                            rating += Number(
+                                vc.reviews[vc.reviews.length - 1].ratings
+                            );
+                        }
                     }
                 });
             });
         return { count, rating };
+    }
+
+    public static async setExpiryTime(
+        duration: number,
+        requestId: string,
+        creationTime: number
+    ): Promise<void> {
+        const expiryTime = new Date(
+            creationTime + Math.ceil(duration / 300) * 1800 * 1000
+        );
+        await VcDbModel.findByIdAndUpdate(requestId, { expiryTime });
+    }
+
+    public static async updateVideoLength(
+        url: string,
+        requestId: string
+    ): Promise<any> {
+        let videoLength = 0;
+        videoLength = Math.ceil(await getVideoDurationInSeconds(url));
+        const vc = await VcDbModel.findByIdAndUpdate(requestId, {
+            videoLength,
+        });
+        const creationTime = new Date(
+            ((vc as unknown) as any).createdAt
+        ).getTime();
+        await VcModel.setExpiryTime(videoLength, requestId, creationTime);
+    }
+    public static vcCronHandler(
+        expiryTimeGTE: string,
+        expiryTimeLTE: string
+    ): void {
+        const logger = loggerFactory(VcModel.serviceName, "vcCronHandler");
+        const failedRequests: string[] = [];
+        VcDbModel.find({
+            expiryTime: {
+                $gte: new Date(expiryTimeGTE),
+                $lte: new Date(expiryTimeLTE),
+            },
+        })
+            .exec()
+            .then((vc) => {
+                const status = [
+                    VCRequestStatus.INITIATED,
+                    VCRequestStatus.INDEXING_REQUESTED,
+                    VCRequestStatus.INDEXING_SKIPPED,
+                    VCRequestStatus.CALLBACK_RECEIVED,
+                    VCRequestStatus.INSIGHT_REQUESTED,
+                ];
+                let pendingStatus = false;
+                if (vc) {
+                    vc.forEach((vcReq) => {
+                        pendingStatus = status.some(
+                            (vcStatus) => vcStatus === vcReq.status
+                        );
+                        if (pendingStatus) {
+                            logger.info("Failing requests found");
+                            FileModel.vcInputFileHandler(vcReq);
+                            failedRequests.push(getFormattedJson(vcReq));
+                        }
+                    });
+                }
+                if (!pendingStatus) {
+                    logger.info(
+                        `No failed VC Request found during cron sweep for for interval ${expiryTimeGTE} and ${expiryTimeLTE}`
+                    );
+                } else {
+                    logger.info("notifying I-Stem for failures");
+                    EmailService.sendInternalDiagnosticEmail(
+                        ExceptionMessageTemplates.getVCFailureMessage({
+                            data: failedRequests,
+                            timeInterval: [expiryTimeGTE, expiryTimeLTE],
+                        })
+                    );
+                }
+            });
+    }
+
+    public static async updateEscalatedVcRequestWithRemediatedFile(
+        vcId: string,
+        url: string
+    ) {
+        await VcDbModel.findByIdAndUpdate(vcId, { outputURL: url });
+    }
+
+    public static async updateVcStatusById(
+        vcId: string,
+        status: VCRequestStatus
+    ): Promise<any> {
+        await VcDbModel.findByIdAndUpdate(vcId, {
+            status,
+            $push: {
+                statusLog: new VCRequestLifecycleEvent(status, new Date()),
+            },
+        }).exec();
     }
 }
 

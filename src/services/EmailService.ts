@@ -97,6 +97,21 @@ class EmailService {
         EmailQueue.dispatch(message);
     }
 
+    public async sendEmailToCandidate(
+        message: MessageModel,
+        user: UserModel,
+        ccEmail: string[]
+    ) {
+        const logger = loggerFactory(
+            EmailService.ServiceName,
+            "sendEmailToCandidate"
+        );
+        logger.info("sending email to user: " + user.email);
+        message.receiverEmail = user.email;
+        message.ccEmail = ccEmail;
+        EmailQueue.dispatch(message);
+    }
+
     public async sendEmailToInvitedUser(
         message: MessageModel,
         user: InvitedUser
@@ -132,8 +147,12 @@ class EmailService {
             html: mesg.body,
             text: mesg.text,
             to: mesg.to,
+            cc: mesg.ccEmail,
             subject: mesg.subject,
-            from: process.env.EMAIL_FROM_ADDRESS,
+            from: {
+                name: "I-Stem",
+                address: process.env.EMAIL_FROM_ADDRESS,
+            },
         };
         this.sendEmailPromise(msg)
             .then(() => {
@@ -154,8 +173,12 @@ class EmailService {
             html: message.body,
             text: message.text,
             to: message.receiverEmail,
+            cc: message.ccEmail,
             subject: message.subject,
-            from: process.env.EMAIL_FROM_ADDRESS,
+            from: {
+                name: "I-Stem",
+                address: process.env.EMAIL_FROM_ADDRESS,
+            },
         };
         this.sendEmailPromise(msg)
             .then(() => {

@@ -14,6 +14,7 @@ export interface UniversityRequestSchema extends ValidatedRequestSchema {
         students: string;
         staffs: string;
         registeredByUser: string;
+        organizationType: string;
         noStudentsWithDisability?: string;
         domainAccess: string;
         escalationHandledBy: string;

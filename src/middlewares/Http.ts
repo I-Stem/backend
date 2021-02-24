@@ -40,7 +40,7 @@ class Http {
 
         // Enables the "gzip" / "deflate" compression for response
         _express.use(compress());
-        _express.use(passport.initialize());
+        //_express.use(passport.initialize());
 
         return _express;
     }

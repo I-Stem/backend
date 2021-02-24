@@ -1,17 +1,17 @@
-import loggerFactory from "../middlewares/WinstonLogger";
-import MentorshipDbModel from "../models/Mentorship";
+import loggerFactory from "../../middlewares/WinstonLogger";
+import MentorshipDbModel from "../../models/Mentorship";
 
-export const enum JoinAs {
-    MENTOR = "mentor",
-    MENTEE = "mentee",
-    BOTH = "both",
+export const enum SignupAs {
+    MENTOR = "MENTOR",
+    MENTEE = "MENTEE",
+    BOTH = "BOTH",
 }
 
 export const enum ConnectOften {
-    ONCE_EVERY_WEEK = "once_every_week",
-    ONCE_EVERY_OTHER_WEEK = "once_every_other_week",
-    ONCE_EVERY_MONTH = "once_every_month",
-    ONCE_EVERY_3_MONTH = "once_every_3_month",
+    ONCE_EVERY_WEEK = "ONCE_EVERY_WEEK",
+    ONCE_EVERY_OTHER_WEEK = "ONCE_EVERY_OTHER_WEEK",
+    ONCE_EVERY_MONTH = "ONCE_EVERY_MONTH",
+    ONCE_EVERY_3_MONTHS = "ONCE_EVERY_3_MONTHS",
 }
 
 export interface MentorshipModelProps {
@@ -22,7 +22,7 @@ export interface MentorshipModelProps {
     currentPosition: string;
     isPWD: Boolean;
     associatedDisabilities: string[];
-    signupAs: JoinAs;
+    signupAs: SignupAs;
     learnSkills: string;
     questionToMentor: string;
     anythingElse: string;
@@ -48,7 +48,7 @@ class MentorshipModel {
     currentPosition: string = "";
     isPWD: Boolean = false;
     associatedDisabilities: string[] = [];
-    signupAs: JoinAs = JoinAs.MENTEE;
+    signupAs: SignupAs = SignupAs.MENTEE;
     learnSkills: string = "";
     questionToMentor: string = "";
     anythingElse: string = "";
@@ -104,7 +104,7 @@ class MentorshipModel {
     public static async updateMentorshipForUser(
         mentorshipId: string,
         mentorshipStatus: string[],
-        signupAs: JoinAs
+        signupAs: SignupAs
     ): Promise<any> {
         const logger = loggerFactory(
             MentorshipModel.ServiceName,
@@ -125,7 +125,7 @@ class MentorshipModel {
     public static async updateMenteeshipForUser(
         mentorshipId: string,
         cancelMenteeship: boolean,
-        signupAs: JoinAs
+        signupAs: SignupAs
     ): Promise<any> {
         const logger = loggerFactory(
             MentorshipModel.ServiceName,

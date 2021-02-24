@@ -35,11 +35,12 @@ import EmailService from "../../services/EmailService";
 import FeedbackMessageTemplates from "../../MessageTemplates/FeedbackTemplates";
 import EscalationModel, {
     AIServiceCategory,
+    EscalationStatus,
 } from "../../domain/EscalationModel";
 import VcResponseQueue from "../../queues/VcResponse";
 import Credit from "../../domain/Credit";
 
-function mapVCRequestStatusToUIStatus(status: VCRequestStatus): Number {
+function mapVCRequestStatusToUIStatus(status: VCRequestStatus): number {
     const statusConversionMap = new Map([
         [VCRequestStatus.INITIATED, 1],
         [VCRequestStatus.CALLBACK_RECEIVED, 1],
@@ -51,7 +52,9 @@ function mapVCRequestStatusToUIStatus(status: VCRequestStatus): Number {
         [VCRequestStatus.INSIGHT_FAILED, 3],
         [VCRequestStatus.INSIGHT_REQUESTED, 1],
         [VCRequestStatus.ESCALATION_REQUESTED, 4],
-        [VCRequestStatus.ESCALATION_RESOLVED, 2],
+        [VCRequestStatus.ESCALATION_RESOLVED, 5],
+        [VCRequestStatus.RETRY_REQUESTED, 6],
+        [VCRequestStatus.RESOLVED_FILE_USED, 2],
     ]);
 
     return statusConversionMap.get(status) || 0;
@@ -163,15 +166,33 @@ class VCController {
 
             const user = await UserModel.getUserById(loggedInUser.id);
             await user?.addUserTagIfDoesNotExist(vcData.tag);
-
-            if (!(await vcData.persist())) {
+            const vcRequest = await vcData.persist();
+            if (!vcRequest) {
                 return createResponse(
                     res,
                     HttpStatus.BAD_GATEWAY,
                     "Persistence layer is failing"
                 );
             }
-
+            const escalatedFile = await EscalationModel.checkForEscalatedFile(
+                req.body.inputFileId
+            );
+            if (escalatedFile !== null) {
+                logger.info(
+                    "Escalated File for source file: " + req.body.inputFileId
+                );
+                const updateStatus = (vcRequest as VcModel).changeStatusTo(
+                    VCRequestStatus.RESOLVED_FILE_USED
+                );
+                const deductCredits = (vcRequest as VcModel).chargeUserForRequest();
+                const notifyUser = (vcRequest as VcModel).notifyUserForResults();
+                await Promise.all([updateStatus, deductCredits, notifyUser]);
+                return createResponse(
+                    res,
+                    HttpStatus.OK,
+                    "Escalated File Used"
+                );
+            }
             logger.info("Dispatching request to VC Request Queue. %o", vcData);
             VCRequestQueue.dispatch(vcData);
 
@@ -190,6 +211,32 @@ class VCController {
                 "Insufficient Credits"
             );
         }
+    }
+
+    public static async updateVcForFailedRequests(
+        req: Request<{ id: string }>,
+        res: Response
+    ): Promise<any> {
+        const methodname = "updateVcForFailedRequests";
+        const logger = loggerFactory(VCController.servicename, methodname);
+        logger.info(`Update VC for request: ${req.params.id}`);
+        try {
+            const vc = await VcModel.getVCRequestById(req.params.id);
+            if (vc) {
+                await vc.changeStatusTo(VCRequestStatus.RETRY_REQUESTED);
+            }
+        } catch (err) {
+            return createResponse(
+                res,
+                HttpStatus.BAD_GATEWAY,
+                "Internal server error"
+            );
+        }
+        return createResponse(
+            res,
+            HttpStatus.OK,
+            "successfullly updated VC request"
+        );
     }
 
     public static async submitVCReview(req: Request, res: Response) {
@@ -261,6 +308,7 @@ class VCController {
                     sourceFileId: vcRequest.inputFileId,
                     serviceRequestId: vcRequest.vcRequestId,
                     aiServiceConvertedFileURL: vcRequest.outputURL || "",
+                    status: EscalationStatus.UNASSIGNED,
                 });
                 escalationRequest.persist();
                 await vcRequest.changeStatusTo(

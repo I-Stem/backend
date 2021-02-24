@@ -4,12 +4,15 @@ import User, {
     UserRoleEnum,
     UserStatusEnum,
 } from "../../models/User";
+import { UserCreationContext } from "./ContextPaths";
 import { IUser, Tokens } from "../../interfaces/models/user";
 import loggerFactory from "../../middlewares/WinstonLogger";
 import LedgerModel from "../LedgerModel";
 import { plainToClass } from "class-transformer";
 import { doesListContainElement } from "../../utils/library";
-import UniversityModel, { UniversityRoles } from "../UniversityModel";
+import UniversityModel, {
+    UniversityRoles,
+} from "../organization/OrganizationModel";
 import InvitedUserModel, { InvitedUserEnum } from "../InvitedUserModel";
 import {
     InvalidInvitationTokenError,
@@ -22,7 +25,7 @@ import AuthMessageTemplates from "../../MessageTemplates/AuthTemplates";
 import Locals from "../../providers/Locals";
 import bcrypt from "bcrypt";
 
-export enum UserType {
+export const enum UserType {
     I_STEM = "I_STEM",
     UNIVERSITY = "UNIVERSITY",
     BUSINESS = "BUSINESS",
@@ -30,17 +33,48 @@ export enum UserType {
     ADMIN = "ADMIN",
 }
 
-export enum OtherUserRoles {
+export function getUserTypeFromString(userType: any): UserType {
+    switch (userType) {
+        case "I_STEM":
+            return UserType.I_STEM;
+
+        case "UNIVERSITY":
+            return UserType.UNIVERSITY;
+
+        case "BUSINESS":
+            return UserType.BUSINESS;
+
+        case "VOLUNTEER":
+            return UserType.VOLUNTEER;
+
+        case "ADMIN":
+            return UserType.ADMIN;
+
+        default:
+            return UserType.I_STEM;
+    }
+}
+
+export const enum OtherUserRoles {
     MENTOR = "MENTOR",
     UNKNOWN = "UNKNOWN",
 }
 
+export interface CardPreferences {
+    showOnboardStaffCard: boolean;
+    showOnboardStudentsCard: boolean;
+}
 export const enum OAuthProvider {
     GOOGLE = "GOOGLE",
     FACEBOOK = "FACEBOOK",
     TWITTER = "TWITTER",
     GITHUB = "GITHUB",
     PASSWORD = "PASSWORD",
+}
+
+export interface UserPreferences {
+    cardPreferences?: CardPreferences;
+    darkMode?: boolean;
 }
 
 export interface UserModelProps {
@@ -56,16 +90,17 @@ export interface UserModelProps {
     organizationCode: string;
     rollNumber?: string;
     serviceRole: ServiceRoleEnum;
+    context?: UserCreationContext;
+    isContextualized?: boolean;
     tags?: string[];
     passwordResetToken?: string;
     passwordResetExpires?: Date;
     verifyUserToken?: string;
     verifyUserExpires?: Date;
     isVerified?: boolean;
-    showOnboardStudentsCard?: boolean;
-    showOnboardStaffCard?: boolean;
     oauthProvider: OAuthProvider;
     oauthProviderId?: string;
+    userPreferences?: UserPreferences;
 }
 
 class UserModel {
@@ -91,8 +126,12 @@ class UserModel {
     showOnboardStudentsCard?: boolean;
     showOnboardStaffCard?: boolean;
     serviceRole: ServiceRoleEnum;
+    userPreferences?: UserPreferences;
     oauthProvider: OAuthProvider;
     oauthProviderId?: string;
+    //The context in which this user was created
+    context?: UserCreationContext;
+    isContextualized?: boolean;
 
     constructor(props: UserModelProps) {
         this.userId = props?.userId || props?._id || "";
@@ -111,11 +150,12 @@ class UserModel {
         this.verifyUserToken = props.verifyUserToken;
         this.verifyUserExpires = props.verifyUserExpires;
         this.isVerified = props.isVerified;
-        this.showOnboardStudentsCard = props.showOnboardStudentsCard;
-        this.showOnboardStaffCard = props.showOnboardStaffCard;
+        this.userPreferences = props.userPreferences;
         this.serviceRole = props.serviceRole;
         this.oauthProvider = props.oauthProvider;
         this.oauthProviderId = props.oauthProviderId;
+        this.context = props.context;
+        this.isContextualized = props.isContextualized;
     }
 
     public async persist() {
@@ -135,16 +175,24 @@ class UserModel {
     public async comparePassword(plainText: string): Promise<boolean> {
         return await bcrypt.compare(plainText, this.password);
     }
-
-    public static updateUniversityCardsForUser(userId: string, data: any) {
+    public static async updateUniversityCardsForUser(
+        userId: string,
+        cardPreferences: CardPreferences
+    ) {
         const logger = loggerFactory(
             UserModel.servicename,
             "updateUniversityCardsForUser"
         );
-
-        logger.info(`${data}, ${userId}`);
+        
+        logger.info("Updating card preferences for user");
         try {
-            User.findByIdAndUpdate(userId, data).exec();
+            await User.findByIdAndUpdate(userId, {
+                $set: {
+                    userPreferences: {
+                        cardPreferences,
+                    },
+                },
+            }).exec();
         } catch (error) {
             logger.error(
                 "error encountered while updating university cards data: %o",
@@ -227,12 +275,12 @@ class UserModel {
     public static async getUserByEmail(
         email: string
     ): Promise<UserModel | null> {
-        let methodname = "getUserByEmail";
-        let logger = loggerFactory(UserModel.servicename, methodname);
+        const methodname = "getUserByEmail";
+        const logger = loggerFactory(UserModel.servicename, methodname);
 
         let user: UserModel | null = null;
         try {
-            let userInstance = await User.findOne({ email: email }).lean();
+            const userInstance = await User.findOne({ email: email }).lean();
             if (userInstance === null) {
                 throw Error(
                     "couldn't find user in database for email id: " + email
@@ -249,11 +297,11 @@ class UserModel {
     public static async findUserByEmail(
         email: string
     ): Promise<UserModel | null> {
-        let logger = loggerFactory(UserModel.servicename, "findUserByEmail");
+        const logger = loggerFactory(UserModel.servicename, "findUserByEmail");
 
         let user: UserModel | null = null;
         try {
-            let userInstance = await User.findOne({ email: email }).lean();
+            const userInstance = await User.findOne({ email: email }).lean();
             if (userInstance === null) {
                 return null;
             }
@@ -265,6 +313,24 @@ class UserModel {
         return user;
     }
 
+    public async setIsContextualized(isContextualized: boolean) {
+        const logger = loggerFactory(UserModel.name, "setIsContextualized");
+        try {
+            await User.findByIdAndUpdate(this.userId, { isContextualized });
+        } catch (error) {
+            logger.error("couldn't update isContextualized");
+        }
+    }
+
+    public async getFirstTimeContext() {
+        const contextPath =
+            this.isContextualized === undefined ||
+            this.isContextualized === true
+                ? undefined
+                : this.context;
+        if (this.isContextualized !== true) this.setIsContextualized(true);
+        return contextPath;
+    }
     public deductCredits(amount: number, reason: string): void {
         const methodname = "deductCredits";
         const logger = loggerFactory(UserModel.servicename, methodname);
@@ -457,6 +523,18 @@ class UserModel {
         })
             .skip(offset)
             .limit(limit)
+            .sort({ createdAt: 1 })
+            .lean();
+    }
+
+    public static async getStudentDetailsByOrganizationCode(
+        organizationCode: string
+    ) {
+        return User.find({
+            organizationCode,
+            role: UniversityRoles.STUDENT,
+        })
+            .sort({ createdAt: 1 })
             .lean();
     }
 
@@ -523,29 +601,37 @@ class UserModel {
                 throw new UserInfoSaveError("couldn't save information");
             }
 
-        if (invitationToken) {
-            await persistedUser?.updateDetailsForInvitedUser(invitationToken);
-                        } else {
-                        if(props.oauthProvider === OAuthProvider.PASSWORD) {
-            await persistedUser?.createAccountEmailVerificationRequest(emailVerificationLink || "");
-                        }
+            if (invitationToken) {
+                await persistedUser?.updateDetailsForInvitedUser(
+                    invitationToken
+                );
+            } else {
+                if (props.oauthProvider === OAuthProvider.PASSWORD) {
+                    await persistedUser?.createAccountEmailVerificationRequest(
+                        emailVerificationLink || ""
+                    );
+                }
 
-persistedUser.associateUserWithOrganization();
+                persistedUser.associateUserWithOrganization();
 
+                if (
+                    persistedUser?.userType === UserType.BUSINESS ||
+                    persistedUser?.userType === UserType.UNIVERSITY
+                ) {
+                    await UniversityModel.performUniversityAccountPreApprovalRequest(
+                        persistedUser
+                    );
+                }
+            }
 
-                            if (
-                                persistedUser?.userType === UserType.BUSINESS ||
-                                persistedUser?.userType === UserType.UNIVERSITY
-                            ) {
-                                await UniversityModel.performUniversityAccountPreApprovalRequest(persistedUser);
-                            }
-                        }
-
-                        if(invitationToken ||  persistedUser.oauthProvider !== OAuthProvider.PASSWORD) {
-                            await persistedUser.postAccountVerificationProcess();
-                        }
-return persistedUser;
-        } catch(error) {
+            if (
+                invitationToken ||
+                persistedUser.oauthProvider !== OAuthProvider.PASSWORD
+            ) {
+                await persistedUser.postAccountVerificationProcess();
+            }
+            return persistedUser;
+        } catch (error) {
             logger.error("encountered error: " + error.name);
             throw error;
         }
@@ -617,15 +703,21 @@ return persistedUser;
         }
     }
 
-    public async createAccountEmailVerificationRequest(verificationLink:string) {
-        const logger = loggerFactory(UserModel.servicename, "createAccountEmailVerificationRequest");
-        
-        const _verificationLink = `${
-            verificationLink
-        }?verifyToken=${
+    public async createAccountEmailVerificationRequest(
+        verificationLink: string
+    ) {
+        const logger = loggerFactory(
+            UserModel.servicename,
+            "createAccountEmailVerificationRequest"
+        );
+
+        const _verificationLink = `${verificationLink}?verifyToken=${
             this.verifyUserToken
         }&email=${encodeURIComponent(this.email)}`;
-        logger.info("generating email verification link with query param: " + _verificationLink);
+        logger.info(
+            "generating email verification link with query param: " +
+                _verificationLink
+        );
         EmailService.sendEmailToUser(
             this,
             AuthMessageTemplates.getAccountEmailVerificationMessage({

@@ -3,9 +3,9 @@
  *
  */
 
-import { UniversityRoles } from "../../domain/UniversityModel";
+import { UniversityRoles } from "../../domain/organization/OrganizationModel";
 import { ServiceRoleEnum, UserRoleEnum } from "../../../src/models/User";
-import {OAuthProvider, OtherUserRoles, UserType} from "../../domain/user";
+import {OAuthProvider, OtherUserRoles, UserType, UserPreferences} from "../../domain/user";
 
 
 export interface Tokens {
@@ -48,6 +48,7 @@ export interface IUser {
     deductCredits(amount: number, reason: string): void;
     rollNumber?: string;
     serviceRole: ServiceRoleEnum;
+    userPreferences: UserPreferences;
     oauthProvider: OAuthProvider;
     oauthProviderId: string;
     //    generateResetExpiryDate(): Date;

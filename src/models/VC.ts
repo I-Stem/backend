@@ -51,6 +51,8 @@ export const VCSchema = new mongoose.Schema(
                 VCRequestStatus.COMPLETED,
                 VCRequestStatus.ESCALATION_REQUESTED,
                 VCRequestStatus.ESCALATION_RESOLVED,
+                VCRequestStatus.RETRY_REQUESTED,
+                VCRequestStatus.RESOLVED_FILE_USED,
             ],
             index: true,
         },
@@ -63,6 +65,7 @@ export const VCSchema = new mongoose.Schema(
             default: CaptionOutputFormat.TXT,
             enum: [CaptionOutputFormat.SRT, CaptionOutputFormat.TXT],
         },
+        expiryTime: { type: Date },
     },
     {
         toJSON: { virtuals: true, getters: true },

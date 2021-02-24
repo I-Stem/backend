@@ -1,9 +1,7 @@
 import mongoose from "mongoose";
-import { UniversityRoles } from "src/domain/UniversityModel";
-import {
-    InvitedUser,
-    InvitedUserEnum,
-} from "../domain/InvitedUserModel";
+import { UniversityRoles } from "../domain/organization/OrganizationModel";
+import { UserType } from "../domain/user";
+import { InvitedUser, InvitedUserEnum } from "../domain/InvitedUserModel";
 
 const InvitedUserSchema = new mongoose.Schema(
     {
@@ -31,7 +29,15 @@ const InvitedUserSchema = new mongoose.Schema(
         rollNumber: { type: String },
         role: {
             type: String,
-            enum: [UniversityRoles.STUDENT, UniversityRoles.STAFF]
+            enum: [
+                UniversityRoles.STUDENT,
+                UniversityRoles.STAFF,
+                UniversityRoles.REMEDIATOR,
+            ],
+        },
+        userType: {
+            type: String,
+            enum: [UserType.BUSINESS, UserType.UNIVERSITY, UserType.I_STEM],
         },
     },
     {

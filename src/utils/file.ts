@@ -2,7 +2,7 @@
 import S3 from "aws-sdk/clients/s3";
 import * as fs from "fs";
 import { Request, Response, NextFunction } from "express";
-import loggerFactory from '../middlewares/WinstonLogger';
+import loggerFactory from "../middlewares/WinstonLogger";
 
 let pkgcloud = require("pkgcloud"); // a cloud API standard library: https://github.com/nodejitsu/pkgcloud
 let s3client = pkgcloud.storage.createClient({
@@ -18,27 +18,31 @@ const getBlobName = (originalName: string) => {
     //     .toString()
     //     .replace(/0\./, ''); // remove "0." from start of string
 
-    return `inputFile-${originalName.replace(/\s+/g, '-').toLowerCase()}`;
+    return `inputFile-${originalName.replace(/\s+/g, "-").toLowerCase()}`;
 };
 
-const uploadFileToS3Bucket = (hash, filename, file) => {
+const uploadFileToS3Bucket = (hash, filename, file, contentType: string) => {
     const s3 = new S3({
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
         region: process.env.AWS_REGION,
     });
     const logger = loggerFactory(fileName, "uploadFileToS3Bucket");
-    logger.info("Uploading OCR JSON to S3 bucket.......");
+    logger.info("Uploading file to S3 bucket.......");
     const upload = s3.upload(
         {
             Bucket: process.env.AWS_BUCKET_NAME || "",
             Key: `files/${hash}/${filename}`,
-            Body: JSON.stringify(file),
-            ContentType: "application/json",
+            Body: contentType.includes("application/json")
+                ? JSON.stringify(file)
+                : file,
+            ContentType: contentType,
         },
         function (err, data) {
             if (err) {
-                logger.error(`Error uplaoding file to S3: ${JSON.stringify(err)}`);
+                logger.error(
+                    `Error uplaoding file to S3: ${JSON.stringify(err)}`
+                );
             }
         }
     );
@@ -48,7 +52,32 @@ const uploadFileToS3Bucket = (hash, filename, file) => {
 export async function saveOCRjson(file: any, hash: string, filename: string) {
     const logger = loggerFactory(fileName, "saveOCRjson");
     try {
-        const upload = await uploadFileToS3Bucket(hash, filename, file);
+        const upload = await uploadFileToS3Bucket(
+            hash,
+            filename,
+            file,
+            "application/json"
+        );
+        logger.info(`S3 upload completed, ${upload.Location}`);
+        return upload.Location;
+    } catch (err) {
+        logger.info(`error during file upload ${err}`);
+    }
+}
+
+export async function saveStudentsReportCSV(
+    file: any,
+    hash: string,
+    filename: string
+) {
+    const logger = loggerFactory(fileName, "saveStudentRecordsCSV");
+    try {
+        const upload = await uploadFileToS3Bucket(
+            hash,
+            filename,
+            file,
+            "text/csv"
+        );
         logger.info(`S3 upload completed, ${upload.Location}`);
         return upload.Location;
     } catch (err) {

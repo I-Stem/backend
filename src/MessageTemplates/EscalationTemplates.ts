@@ -41,7 +41,7 @@ class EscalationMessageTemplates {
             body: `<p>Hello I-Stem</p>
     <p>A request has been escalated, I need your help. details are:</p>
 <ul>
-<li>Escalator email: ${props.escalatorName}</li>
+<li>Escalator Name: ${props.escalatorName}</li>
 <li>Escalator Email: ${props.escalatorEmail}</li>
 <li>Escalator Id: ${props.escalatorId}</li>
 <li>escalated page range: ${props.pageRanges}</li>

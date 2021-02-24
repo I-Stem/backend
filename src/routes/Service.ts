@@ -7,6 +7,6 @@ router.get('/', ServiceController.index);
 
 router.get('/access', ServiceController.getAccessRequest);
 
-router.get('/email/:email', ServiceController.upgradeUser);
+router.post('/email/:email', ServiceController.upgradeUser);
 
 export default router;

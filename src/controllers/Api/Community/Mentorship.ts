@@ -3,16 +3,18 @@
  *
  */
 import { Request, Response } from "express";
-import { createResponse, response } from "../../utils/response";
+import { createResponse, response } from "../../../utils/response";
 import * as HttpStatus from "http-status-codes";
-import Mentorship from "../../models/Mentorship";
-import loggerFactory from "../../middlewares/WinstonLogger";
-import MentorshipModel, { JoinAs } from "../../domain/MentorshipModel";
+import Mentorship from "../../../models/Mentorship";
+import loggerFactory from "../../../middlewares/WinstonLogger";
+import MentorshipModel, {
+    SignupAs,
+} from "../../../domain/Community/MentorshipModel";
 import { plainToClass } from "class-transformer";
-import emailService from "../../services/EmailService";
-import MentorshipTemplate from "../../MessageTemplates/MentorshipTemplate";
-import { getFormattedJson } from "../../utils/formatter";
-import UserModel from "../../domain/user/User";
+import emailService from "../../../services/EmailService";
+import MentorshipTemplate from "../../../MessageTemplates/MentorshipTemplate";
+import { getFormattedJson } from "../../../utils/formatter";
+import UserModel from "../../../domain/user/User";
 
 class MentorshipController {
     static ServiceName = "MentorshipController";
@@ -62,7 +64,7 @@ class MentorshipController {
         if (user !== null) {
             if (
                 mentorshipInstance.signupAs.toUpperCase() ===
-                JoinAs.MENTEE.toUpperCase()
+                SignupAs.MENTEE.toUpperCase()
             ) {
                 emailService.sendEmailToUser(
                     user,
@@ -79,7 +81,7 @@ You can always reach out to us at info@inclusivestem.org, if you have any query 
                 );
             } else if (
                 mentorshipInstance.signupAs.toUpperCase() ===
-                JoinAs.MENTOR.toUpperCase()
+                SignupAs.MENTOR.toUpperCase()
             ) {
                 emailService.sendEmailToUser(
                     user,
@@ -97,7 +99,7 @@ You can always reach out to us, if you have any query or suggestions at info@inc
                 );
             } else if (
                 mentorshipInstance.signupAs.toUpperCase() ===
-                JoinAs.BOTH.toUpperCase()
+                SignupAs.BOTH.toUpperCase()
             ) {
                 emailService.sendEmailToUser(
                     user,
