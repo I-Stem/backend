@@ -189,7 +189,7 @@ class UniversityController {
                 ValidateSchema.emailSchema.validate({ email }).error
                     ?.message !== undefined
         );
-        const data: InvitedUser[] = [];
+        const data: InvitedUserModel[] = [];
         if (errors)
             return createResponse(
                 res,

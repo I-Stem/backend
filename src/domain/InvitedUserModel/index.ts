@@ -34,9 +34,9 @@ export class InvitedUserModel {
     email: string;
     fullName?: string;
     university: string;
-    verifyToken: string;
-    isRegistered: boolean;
-    userId: string;
+    verifyToken?: string;
+    isRegistered?: boolean;
+    userId?: string;
     rollNumber?: string;
     role: UniversityRoles;
     userType: UserType;
@@ -55,7 +55,7 @@ export class InvitedUserModel {
         this.userType = props.userType;
     }
 
-    static async persistInvitedUser(userData: InvitedUser[]) {
+    static async persistInvitedUser(userData: InvitedUserModel[]) {
         const logger = loggerFactory(
             InvitedUserModel.servicename,
             "persistInvitedUser"
