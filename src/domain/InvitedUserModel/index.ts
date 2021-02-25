@@ -40,6 +40,8 @@ export class InvitedUserModel {
     rollNumber: string;
     role: UniversityRoles;
     userType: UserType;
+    statusLog?: { status: InvitedUserEnum; actionAt: Date }[];
+    status?: InvitedUserEnum;
 
     constructor(props: InvitedUser) {
         this.email = props.email;

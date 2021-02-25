@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { UniversityRoles } from "../domain/organization";
 import { UserType } from "../domain/user/UserConstants";
 import { InvitedUserEnum } from "../domain/InvitedUserModel/InvitedUserConstants";
-import {InvitedUser} from "../domain/InvitedUserModel";
+import {InvitedUserModel} from "../domain/InvitedUserModel";
 const InvitedUserSchema = new mongoose.Schema(
     {
         email: { type: String, unique: true, lowercase: true, required: true },
@@ -52,7 +52,7 @@ const InvitedUserSchema = new mongoose.Schema(
  */
 
 InvitedUserSchema.pre("insertMany",  (docs, next) => {
-    docs.map((user: InvitedUser) => {
+    docs.map((user: InvitedUserModel) => {
         const verifyToken = Buffer.from(
             (user.email + (Math.random() * 1000).toString).trim()
         ).toString("base64");
@@ -61,7 +61,7 @@ InvitedUserSchema.pre("insertMany",  (docs, next) => {
     next();
 });
 
-export default mongoose.model<InvitedUser & mongoose.Document>(
+export default mongoose.model<InvitedUserModel & mongoose.Document>(
     "InvitedUser",
     InvitedUserSchema
 );
