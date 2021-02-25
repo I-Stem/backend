@@ -50,16 +50,11 @@ const InvitedUserSchema = new mongoose.Schema(
 );
 
 
-const InvitedUserDBModel = mongoose.model<InvitedUserModel & mongoose.Document>(
-    "InvitedUser",
-    InvitedUserSchema
-);
-
 
 /**
  *  Populate InvitedUser with verify Token
- */
-InvitedUserSchema.pre<typeof InvitedUserDBModel>("insertMany",  
+
+InvitedUserSchema.pre<>("insertMany",  
 function( next, docs) {
     docs.map((user: InvitedUserModel) => {
         const verifyToken = Buffer.from(
@@ -73,5 +68,9 @@ function( next, docs) {
     logger.error("encountered error in pre hook of insert many: %o", error)
 }
 );
+ */
+export default mongoose.model<InvitedUserModel & mongoose.Document>(
+    "InvitedUser",
+    InvitedUserSchema
+);
 
-export default InvitedUserDBModel;
