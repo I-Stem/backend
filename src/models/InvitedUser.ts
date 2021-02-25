@@ -49,11 +49,18 @@ const InvitedUserSchema = new mongoose.Schema(
     }
 );
 
+
+const InvitedUserDBModel = mongoose.model<InvitedUserModel & mongoose.Document>(
+    "InvitedUser",
+    InvitedUserSchema
+);
+
+
 /**
  *  Populate InvitedUser with verify Token
  */
-
-InvitedUserSchema.pre<InvitedUserModel[]>("insertMany",  function(this:InvitedUserModel[], next, docs) {
+InvitedUserSchema.pre<typeof InvitedUserDBModel>("insertMany",  
+function( next, docs) {
     docs.map((user: InvitedUserModel) => {
         const verifyToken = Buffer.from(
             (user.email + (Math.random() * 1000).toString).trim()
@@ -67,7 +74,4 @@ InvitedUserSchema.pre<InvitedUserModel[]>("insertMany",  function(this:InvitedUs
 }
 );
 
-export default mongoose.model<InvitedUserModel & mongoose.Document>(
-    "InvitedUser",
-    InvitedUserSchema
-);
+export default InvitedUserDBModel;
