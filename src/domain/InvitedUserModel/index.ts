@@ -32,12 +32,12 @@ export interface InvitedUser {
 export class InvitedUserModel {
     static servicename = "InvitedUserModel";
     email: string;
-    fullName: string;
+    fullName?: string;
     university: string;
     verifyToken: string;
     isRegistered: boolean;
     userId: string;
-    rollNumber: string;
+    rollNumber?: string;
     role: UniversityRoles;
     userType: UserType;
     statusLog?: { status: InvitedUserEnum; actionAt: Date }[];
