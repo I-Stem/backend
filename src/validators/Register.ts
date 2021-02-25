@@ -3,7 +3,7 @@
  *
  */
 import * as Joi from "@hapi/joi";
-import { UserType } from "../domain/user";
+import { UserType } from "../domain/user/UserConstants";
 
 const registrationSchema = Joi.object({
     userType: Joi.string()

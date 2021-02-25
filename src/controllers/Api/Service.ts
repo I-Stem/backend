@@ -10,11 +10,12 @@ import loggerFactory from "../../middlewares/WinstonLogger";
 import UserModel from "../../domain/user/User";
 import ServiceRequestTemplates from "../../MessageTemplates/ServiceRequestTemplates";
 import User, { ServiceRoleEnum, UserStatusEnum } from "../../models/User";
-import AdminReviewModel, {
+import {AdminReviewModel} from "../../domain/AdminReviewModel";
+import {
     AdminReviewStatus,
     ReviewEnum,
     ReviewRequestType,
-} from "../../domain/AdminReviewModel";
+} from "../../domain/AdminReviewModel/AdminReviewConstants";
 
 export default class ServiceController {
     static serviceName = "Service Controller";

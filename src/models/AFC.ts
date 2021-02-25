@@ -5,14 +5,14 @@
 
 import { IAFC } from "../interfaces/models/afc";
 import mongoose from "mongoose";
-
 import ReviewSchema from "./Review";
-import AfcModel, {
+import {AfcModel} from "../domain/AfcModel";
+import {
     AFCRequestOutputFormat,
     AFCRequestStatus,
     DocType,
-} from "../domain/AfcModel";
-import { string } from "@hapi/joi";
+} from "../domain/AfcModel/AFCConstants";
+
 
 const mongooseFuzzySearching = require("mongoose-fuzzy-searching");
 

@@ -3,7 +3,8 @@
  *
  */
 
-import MessageModel, { MessageStatus } from '../domain/MessageModel';
+import {MessageModel} from '../domain/MessageModel';
+import { MessageStatus } from '../domain/MessageModel/MessageConstants';
 import { IMessage } from '../interfaces/models/message';
 import mongoose from '../providers/Database';
 

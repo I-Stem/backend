@@ -5,8 +5,8 @@
 import Queue from "bull";
 import Locals from "../providers/Locals";
 import loggerFactory from "../middlewares/WinstonLogger";
-import AFCModel from '../domain/AfcModel';
-import VcModel from "../domain/VcModel";
+import {AfcModel} from '../domain/AfcModel';
+import {VcModel} from "../domain/VcModel";
 /**
  *  AFC Process Queue for finding the status of every afc request.
  *  Time Interval: Past 2 Hrs to Past 1 Hr.
@@ -72,7 +72,7 @@ class ProcessQueue {
                 date.getTime() - 1000 * 60 * 60
             ).toISOString();
             const now = date.toISOString();
-            AFCModel.afcCronHandler(hourAgo, now);
+            AfcModel.afcCronHandler(hourAgo, now);
             VcModel.vcCronHandler(hourAgo, now);
             _done();
         });

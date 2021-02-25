@@ -10,10 +10,10 @@ import loggerFactory from "../../middlewares/WinstonLogger";
 import LedgerModel from "../LedgerModel";
 import { plainToClass } from "class-transformer";
 import { doesListContainElement } from "../../utils/library";
-import UniversityModel, {
-    UniversityRoles,
-} from "../organization/OrganizationModel";
-import InvitedUserModel, { InvitedUserEnum } from "../InvitedUserModel";
+import UniversityModel from "../organization/OrganizationModel";
+import {UniversityRoles} from "../organization";
+import {InvitedUserModel} from "../InvitedUserModel";
+import {InvitedUserEnum} from "../InvitedUserModel/InvitedUserConstants";
 import {
     InvalidInvitationTokenError,
     UserAlreadyRegisteredError,
@@ -24,14 +24,7 @@ import EmailService from "../../services/EmailService";
 import AuthMessageTemplates from "../../MessageTemplates/AuthTemplates";
 import Locals from "../../providers/Locals";
 import bcrypt from "bcrypt";
-
-export const enum UserType {
-    I_STEM = "I_STEM",
-    UNIVERSITY = "UNIVERSITY",
-    BUSINESS = "BUSINESS",
-    VOLUNTEER = "VOLUNTEER",
-    ADMIN = "ADMIN",
-}
+import {UserType, OAuthProvider, OtherUserRoles} from "./UserConstants";
 
 export function getUserTypeFromString(userType: any): UserType {
     switch (userType) {
@@ -55,23 +48,10 @@ export function getUserTypeFromString(userType: any): UserType {
     }
 }
 
-export const enum OtherUserRoles {
-    MENTOR = "MENTOR",
-    UNKNOWN = "UNKNOWN",
-}
-
 export interface CardPreferences {
     showOnboardStaffCard: boolean;
     showOnboardStudentsCard: boolean;
 }
-export const enum OAuthProvider {
-    GOOGLE = "GOOGLE",
-    FACEBOOK = "FACEBOOK",
-    TWITTER = "TWITTER",
-    GITHUB = "GITHUB",
-    PASSWORD = "PASSWORD",
-}
-
 export interface UserPreferences {
     cardPreferences?: CardPreferences;
     darkMode?: boolean;
@@ -732,7 +712,7 @@ class UserModel {
             UserModel.servicename,
             "postAccountVerificationProcess"
         );
-        LedgerModel.createCreditTransaction(
+        await LedgerModel.createCreditTransaction(
             this.userId,
             Locals.config().invitedUserCredits,
             "Successful verification"

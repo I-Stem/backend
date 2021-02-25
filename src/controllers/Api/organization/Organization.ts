@@ -3,22 +3,24 @@ import { createResponse, response } from "../../../utils/response";
 import loggerFactory from "../../../middlewares/WinstonLogger";
 import * as HttpStatus from "http-status-codes";
 import ValidateSchema from "../../../validators/StudentData";
-import InvitedUserModel, {
+import {InvitedUserModel, 
     InvitedUser,
     StudentDetail,
 } from "../../../domain/InvitedUserModel";
-import UniversityModel, {
+import UniversityModel from "../../../domain/organization/OrganizationModel";
+import {
     DomainAccessStatus,
     UniversityAccountStatus,
-} from "../../../domain/organization/OrganizationModel";
+} from "../../../domain/organization";
 import UserModel, { CardPreferences } from "../../../domain/user/User";
 import emailService from "../../../services/EmailService";
 import AuthMessageTemplates from "../../../MessageTemplates/AuthTemplates";
-import AdminReviewModel, {
+import {AdminReviewModel} from "../../../domain/AdminReviewModel";
+import {
     AdminReviewStatus,
     ReviewEnum,
     ReviewRequestType,
-} from "../../../domain/AdminReviewModel";
+} from "../../../domain/AdminReviewModel/AdminReviewConstants";
 
 class UniversityController {
     static servicename = "University Controller";
@@ -187,7 +189,7 @@ class UniversityController {
                 ValidateSchema.emailSchema.validate({ email }).error
                     ?.message !== undefined
         );
-        const data: InvitedUser[] = [];
+        const data: InvitedUserModel[] = [];
         if (errors)
             return createResponse(
                 res,

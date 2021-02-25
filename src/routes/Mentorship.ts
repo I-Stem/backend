@@ -1,5 +1,4 @@
 import { Router } from "express";
-import MentorshipModel from "src/domain/Community/MentorshipModel";
 import MentorshipController from "../controllers/Api/Community/Mentorship";
 import { createValidator, ValidatedRequest } from "express-joi-validation";
 import Mentorship from "../validators/Mentorship";

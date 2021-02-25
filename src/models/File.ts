@@ -5,7 +5,7 @@
 
 import FileModel from "../domain/FileModel";
 import mongoose from "mongoose";
-import { DocType } from "../domain/AfcModel";
+import { DocType } from "../domain/AfcModel/AFCConstants";
 
 export const FileSchema = new mongoose.Schema(
     {

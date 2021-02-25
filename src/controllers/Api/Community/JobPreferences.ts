@@ -7,7 +7,7 @@ import { createResponse, response } from "../../../utils/response";
 import * as HttpStatus from "http-status-codes";
 import JobPreferences from "../../../models/JobPreferences";
 import loggerFactory from "../../../middlewares/WinstonLogger";
-import JobPreferencesModel from "../../../domain/Community/JobPreferencesModel";
+import {JobPreferencesModel} from "../../../domain/Community/JobPreferencesModel";
 import { plainToClass } from "class-transformer";
 import emailService from "../../../services/EmailService";
 import JobApplicationTemplate from "../../../MessageTemplates/JobApplicationTemplate";

@@ -1,42 +1,16 @@
-import VcDbModel from "../models/VC";
-import loggerFactory from "../middlewares/WinstonLogger";
-import LedgerModel from "./LedgerModel";
-import MessageQueue from "../queues/message";
-import ReviewModel from "./ReviewModel";
-import UserModel from "./user/User";
-import EmailService from "../services/EmailService";
-import ServiceRequestTemplates from "../MessageTemplates/ServiceRequestTemplates";
+import VcDbModel from "../../models/VC";
+import loggerFactory from "../../middlewares/WinstonLogger";
+import LedgerModel from "../LedgerModel";
+import MessageQueue from "../../queues/message";
+import ReviewModel from "../ReviewModel";
+import UserModel from "../user/User";
+import EmailService from "../../services/EmailService";
+import ServiceRequestTemplates from "../../MessageTemplates/ServiceRequestTemplates";
 import { getVideoDurationInSeconds } from "get-video-duration";
-import { getFormattedJson } from "../utils/formatter";
-import ExceptionMessageTemplates from "../MessageTemplates/ExceptionTemplates";
-import FileModel from "./FileModel";
-
-export const enum VideoExtractionType {
-    CAPTION = "CAPTION",
-    OCR = "OCR",
-    OCR_CAPTION = "OCR_CAPTION",
-}
-
-export const enum CaptionOutputFormat {
-    SRT = "srt",
-    TXT = "txt",
-}
-
-export const enum VCRequestStatus {
-    INITIATED = "INITIATED",
-    INDEXING_REQUESTED = "INDEXING_REQUESTED",
-    INDEXING_REQUEST_FAILED = "INDEXING_REQUEST_FAILED",
-    INDEXING_SKIPPED = "INDEXING_SKIPPED",
-    CALLBACK_RECEIVED = "CALLBACK_RECEIVED",
-    INDEXING_API_FAILED = "INDEXING_API_FAILED",
-    INSIGHT_REQUESTED = "INSIGHT_REQUESTED",
-    INSIGHT_FAILED = "INSIGHT_FAILED",
-    COMPLETED = "COMPLETED",
-    ESCALATION_REQUESTED = "ESCALATION_REQUESTED",
-    ESCALATION_RESOLVED = "ESCALATION_RESOLVED",
-    RETRY_REQUESTED = "RETRY_REQUESTED",
-    RESOLVED_FILE_USED = "RESOLVED_FILE_USED",
-}
+import { getFormattedJson } from "../../utils/formatter";
+import ExceptionMessageTemplates from "../../MessageTemplates/ExceptionTemplates";
+import FileModel from "../FileModel";
+import {VCRequestStatus, VideoExtractionType, CaptionOutputFormat} from "./VCConstants";
 
 export class VCRequestLifecycleEvent {
     status: VCRequestStatus;
@@ -67,7 +41,7 @@ export interface VCProps {
     expiryTime?: Date;
 }
 
-class VcModel {
+export class VcModel {
     static serviceName = "VcModel";
 
     vcRequestId: string;
@@ -412,4 +386,4 @@ class VcModel {
     }
 }
 
-export default VcModel;
+

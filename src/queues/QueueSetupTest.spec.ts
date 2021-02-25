@@ -26,7 +26,6 @@ describe('Checking connection with redis cache', function() {
         let redisConnection: Redis.Redis = new Redis(            {
             port: queueConfig.queuePort,
             host: queueConfig.queueURL,
-            password : queueConfig.queuePassword,
             db: queueConfig.queueDbIndex,
             lazyConnect: true
         });
@@ -53,7 +52,6 @@ testQueue =  new Queue('test-queue', {
             redis: {
                 port: queueConfig.queuePort,
                 host: queueConfig.queueURL,
-                password : queueConfig.queuePassword,
                 db: queueConfig.queueDbIndex
             }
         });

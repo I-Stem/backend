@@ -66,7 +66,8 @@ class VerifyController {
                     })
                 );
             }
-            user?.updateOne({isVerified: true}, async (err) => {
+
+            user?.updateOne({isVerified: true}, {}, async (err) => {
                 if (err) {
                     logger.error(`Internal error occurred. ${err}`);
                     return res.status(HttpStatus.BAD_GATEWAY).json(
@@ -75,9 +76,6 @@ class VerifyController {
                         })
                     );
                 }
-                /**
-                 *  Upgrading the user Role to PREMIUM for special users
-                 */
                 const userEmails = Locals.config().userEmails;
                 if (userEmails)
                     {
@@ -108,6 +106,7 @@ class VerifyController {
                 }
 
             });
+
         });
     }
 }

@@ -1,6 +1,7 @@
 import UserModel from '../domain/user/User';
 import ReviewModel from '../domain/ReviewModel';
-import MessageModel, { MessageLabel } from '../domain/MessageModel';
+import {MessageModel} from '../domain/MessageModel';
+import { MessageLabel } from '../domain/MessageModel/MessageConstants';
 import { getFormattedJson } from '../utils/formatter';
 import {FeedbackCategory} from '../domain/FeedbackModel';
 export enum FeedbackTemplateNames {

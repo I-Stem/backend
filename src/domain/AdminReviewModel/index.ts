@@ -1,7 +1,8 @@
-import { ServiceRoleEnum } from "../models/User";
-import loggerFactory from "../middlewares/WinstonLogger";
-import AdminReviewDb from "../models/AdminReview";
-import UserModel from "./user/User";
+import { ServiceRoleEnum } from "../../models/User";
+import loggerFactory from "../../middlewares/WinstonLogger";
+import AdminReviewDb from "../../models/AdminReview";
+import UserModel from "../user/User";
+import {ReviewEnum, ReviewRequestType, AdminReviewStatus} from "./AdminReviewConstants";
 
 class ServiceRoleRequest {
     userId: string;
@@ -63,21 +64,6 @@ class StatusLifeCycle {
     }
 }
 
-export const enum ReviewEnum {
-    REQUESTED = "REQUESTED",
-    REVIEWED = "REVIEWED",
-}
-
-export const enum ReviewRequestType {
-    ORGANIZATION = "ORGANIZATION",
-    SERVICE = "SERVICE",
-    AUTO_DOMAIN = "AUTO_DOMAIN",
-}
-
-export const enum AdminReviewStatus {
-    APPROVED = "APPROVED",
-    REJECTED = "REJECTED",
-}
 
 interface AdminReviewModelProps {
     serviceRoleRequest?: ServiceRoleRequest;
@@ -91,7 +77,8 @@ interface AdminReviewModelProps {
     reviewerId?: string;
 }
 
-class AdminReviewModel implements AdminReviewModelProps {
+
+export class AdminReviewModel implements AdminReviewModelProps {
     serviceRoleRequest?: ServiceRoleRequest;
     organizationRequest?: OrganizationRequest;
     statusLog?: StatusLifeCycle[];
@@ -272,7 +259,7 @@ class AdminReviewModel implements AdminReviewModelProps {
                 reviewerId: this.reviewerId,
             },
             $push: {
-                statusLog: new StatusLifeCycle(this.status, new Date()),
+                statusLog: new StatusLifeCycle(this.status, new Date())
             },
         }).exec();
     }
@@ -364,4 +351,4 @@ class AdminReviewModel implements AdminReviewModelProps {
     }
 }
 
-export default AdminReviewModel;
+

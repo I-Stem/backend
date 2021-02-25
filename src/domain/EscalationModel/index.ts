@@ -1,27 +1,18 @@
-import EscalationMessageTemplates from "../MessageTemplates/EscalationTemplates";
-import emailService from "../services/EmailService";
-import { getFormattedJson } from "../utils/formatter";
-import loggerFactory from "../middlewares/WinstonLogger";
-import EscalationDbModel from "../models/Escalation";
-import AfcModel, { AFCRequestOutputFormat, AFCRequestStatus } from "./AfcModel";
-import FileModel from "./FileModel";
-import UserModel from "./user/User";
-import VcModel, { VCRequestStatus, VideoExtractionType } from "./VcModel";
-import AfcResponseQueue from "../queues/afcResponse";
-import User from "../models/User";
-import UniversityModel from "./organization/OrganizationModel";
-
-export const enum AIServiceCategory {
-    AFC = "AFC",
-    VC = "VC",
-    NONE = "NONE",
-}
-
-export const enum EscalationStatus {
-    UNASSIGNED = "UNASSIGNED",
-    RESOLVED = "RESOLVED",
-    INPROGRESS = "IN_PROGRESS",
-}
+import EscalationMessageTemplates from "../../MessageTemplates/EscalationTemplates";
+import emailService from "../../services/EmailService";
+import { getFormattedJson } from "../../utils/formatter";
+import loggerFactory from "../../middlewares/WinstonLogger";
+import EscalationDbModel from "../../models/Escalation";
+import {AfcModel} from "../AfcModel";
+import { AFCRequestOutputFormat, AFCRequestStatus } from "../AfcModel/AFCConstants";
+import FileModel from "../FileModel";
+import UserModel from "../user/User";
+import {VcModel} from "../VcModel";
+import { VCRequestStatus, VideoExtractionType } from "../VcModel/VCConstants";
+import AfcResponseQueue from "../../queues/afcResponse";
+import User from "../../models/User";
+import UniversityModel from "../organization/OrganizationModel";
+import {AIServiceCategory, EscalationStatus} from "./EscalationConstants";
 
 class EscalationStatusLifeCycle {
     status: EscalationStatus;
@@ -52,7 +43,7 @@ export interface EscalationProps {
     docOutputFileUrl?: string;
 }
 
-class EscalationModel implements EscalationProps {
+export class EscalationModel implements EscalationProps {
     static serviceName = "EscalationModel";
 
     escalationId?: string;
@@ -523,4 +514,4 @@ class EscalationModel implements EscalationProps {
     }
 }
 
-export default EscalationModel;
+

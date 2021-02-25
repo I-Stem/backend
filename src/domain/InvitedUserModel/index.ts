@@ -1,21 +1,17 @@
-import emailService from "../services/EmailService";
-import loggerFactory from "../middlewares/WinstonLogger";
-import InvitedUserDbModel from "../models/InvitedUser";
-import AuthMessageTemplates from "../MessageTemplates/AuthTemplates";
-import Locals from "../providers/Locals";
-import UniversityModel, {
-    UniversityRoles,
-} from "./organization/OrganizationModel";
-import { UserType } from "../domain/user/User";
+import emailService from "../../services/EmailService";
+import loggerFactory from "../../middlewares/WinstonLogger";
+import InvitedUserDbModel from "../../models/InvitedUser";
+import AuthMessageTemplates from "../../MessageTemplates/AuthTemplates";
+import Locals from "../../providers/Locals";
+import UniversityModel from "../organization/OrganizationModel";
+import { UserType } from "../user/UserConstants";
+import {UniversityRoles} from "../organization";
 
+import {InvitedUserEnum} from "./InvitedUserConstants"
 export interface StudentDetail {
     NAME: string | null;
     EMAIL: string | null;
     ROLL_NUMBER: string | null;
-}
-export const enum InvitedUserEnum {
-    INVITATION_SENT = "INVITATION_SENT",
-    REGISTERED = "REGISTERED",
 }
 
 export interface InvitedUser {
@@ -33,17 +29,19 @@ export interface InvitedUser {
     userType: UserType;
 }
 
-class InvitedUserModel {
+export class InvitedUserModel {
     static servicename = "InvitedUserModel";
     email: string;
-    fullName: string;
+    fullName?: string;
     university: string;
-    verifyToken: string;
-    isRegistered: boolean;
-    userId: string;
-    rollNumber: string;
+    verifyToken?: string;
+    isRegistered?: boolean;
+    userId?: string;
+    rollNumber?: string;
     role: UniversityRoles;
     userType: UserType;
+    statusLog?: { status: InvitedUserEnum; actionAt: Date }[];
+    status?: InvitedUserEnum;
 
     constructor(props: InvitedUser) {
         this.email = props.email;
@@ -57,7 +55,7 @@ class InvitedUserModel {
         this.userType = props.userType;
     }
 
-    static async persistInvitedUser(userData: InvitedUser[]) {
+    static async persistInvitedUser(userData: InvitedUserModel[]) {
         const logger = loggerFactory(
             InvitedUserModel.servicename,
             "persistInvitedUser"
@@ -179,4 +177,4 @@ class InvitedUserModel {
     }
 }
 
-export default InvitedUserModel;
+

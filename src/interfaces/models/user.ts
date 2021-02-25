@@ -3,9 +3,10 @@
  *
  */
 
-import { UniversityRoles } from "../../domain/organization/OrganizationModel";
-import { ServiceRoleEnum, UserRoleEnum } from "../../../src/models/User";
-import {OAuthProvider, OtherUserRoles, UserType, UserPreferences} from "../../domain/user";
+import { UniversityRoles } from "../../domain/organization";
+import { ServiceRoleEnum, UserRoleEnum } from "../../models/User";
+import { UserPreferences} from "../../domain/user";
+import {OAuthProvider,  UserType, OtherUserRoles} from "../../domain/user/UserConstants";
 
 
 export interface Tokens {

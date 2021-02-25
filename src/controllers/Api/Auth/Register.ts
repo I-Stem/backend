@@ -8,16 +8,16 @@ import * as HttpStatus from "http-status-codes";
 import { Request, Response, NextFunction } from "express";
 import loggerFactory from "../../../middlewares/WinstonLogger";
 import emailService from "../../../services/EmailService";
-import UserModel, { OAuthProvider, UserType } from "../../../domain/user/User";
+import UserModel from "../../../domain/user/User";
+import { OAuthProvider, UserType } from "../../../domain/user/UserConstants";
 import AuthMessageTemplates from "../../../MessageTemplates/AuthTemplates";
-import InvitedUserModel, {
-    InvitedUserEnum,
-} from "../../../domain/InvitedUserModel";
+import {InvitedUserModel} from "../../../domain/InvitedUserModel";
+import {InvitedUserEnum} from "../../../domain/InvitedUserModel/InvitedUserConstants";
 import LedgerModel from "../../../domain/LedgerModel";
 import Locals from "../../../providers/Locals";
-import UniversityModel, {
-    UniversityRoles,
-} from "../../../domain/organization/OrganizationModel";
+import UniversityModel from "../../../domain/organization/OrganizationModel";
+import {UniversityRoles} from "../../../domain/organization";
+
 import { UserDomainErrors } from "../../../domain/user/UserDomainErrors";
 import passport from "passport";
 import Login from "./Login";

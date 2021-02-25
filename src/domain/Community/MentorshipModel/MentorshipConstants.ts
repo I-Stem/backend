@@ -1,0 +1,12 @@
+export enum SignupAs {
+    MENTOR = "MENTOR",
+    MENTEE = "MENTEE",
+    BOTH = "BOTH",
+}
+
+export enum ConnectOften {
+    ONCE_EVERY_WEEK = "ONCE_EVERY_WEEK",
+    ONCE_EVERY_OTHER_WEEK = "ONCE_EVERY_OTHER_WEEK",
+    ONCE_EVERY_MONTH = "ONCE_EVERY_MONTH",
+    ONCE_EVERY_3_MONTHS = "ONCE_EVERY_3_MONTHS",
+}

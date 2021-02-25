@@ -1,33 +1,17 @@
 import { plainToClass } from "class-transformer";
-import AfcDbModel from "../models/AFC";
-import ReviewModel from "./ReviewModel";
-import loggerFactory from "../middlewares/WinstonLogger";
-import FileModel from "./FileModel";
-import { getFormattedJson } from "../utils/formatter";
-import EmailService from "../services/EmailService";
-import ExceptionMessageTemplates from "../MessageTemplates/ExceptionTemplates";
+import AfcDbModel from "../../models/AFC";
+import ReviewModel from "../ReviewModel";
+import loggerFactory from "../../middlewares/WinstonLogger";
+import FileModel from "../FileModel";
+import { getFormattedJson } from "../../utils/formatter";
+import EmailService from "../../services/EmailService";
+import ExceptionMessageTemplates from "../../MessageTemplates/ExceptionTemplates";
 import * as pdfJS from "pdfjs-dist/es5/build/pdf";
-import emailService from "../services/EmailService";
-import UserModel from "./user/User";
-import LedgerModel from "./LedgerModel";
-import ServiceRequestTemplates from "../MessageTemplates/ServiceRequestTemplates";
-
-export const enum AFCRequestStatus {
-    REQUEST_INITIATED = "REQUEST_INITIATED",
-    OCR_REQUESTED = "OCR_REQUESTED",
-    OCR_REQUEST_ACCEPTED = "OCR_REQUEST_ACCEPTED",
-    OCR_REQUEST_REJECTED = "OCR_REQUEST_REJECTED",
-    OCR_COMPLETED = "OCR_COMPLETED",
-    OCR_FAILED = "OCR_FAILED",
-    OCR_SKIPPED = "OCR_SKIPPED",
-    FORMATTING_REQUESTED = "FORMATTING_REQUESTED",
-    FORMATTING_COMPLETED = "FORMATTING_COMPLETED",
-    FORMATTING_FAILED = "FORMATTING_FAILED",
-    ESCALATION_REQUESTED = "ESCALATION_REQUESTED",
-    ESCALATION_RESOLVED = "ESCALATION_RESOLVED",
-    RETRY_REQUESTED = "RETRY_REQUESTED",
-    RESOLVED_FILE_USED = "RESOLVED_FILE_USED",
-}
+import emailService from "../../services/EmailService";
+import UserModel from "../user/User";
+import LedgerModel from "../LedgerModel";
+import ServiceRequestTemplates from "../../MessageTemplates/ServiceRequestTemplates";
+import {AFCRequestStatus, DocType, AFCRequestOutputFormat, AFCTriggerer} from "./AFCConstants";
 
 export class AFCRequestLifecycleEvent {
     status: AFCRequestStatus;
@@ -37,23 +21,6 @@ export class AFCRequestLifecycleEvent {
         this.status = status;
         this.actionAt = actionedAt;
     }
-}
-
-export const enum AFCRequestOutputFormat {
-    PDF = "PDF",
-    TEXT = "TXT",
-    WORD = "DOCX",
-    MP3 = "MP3",
-    HTML = "HTML",
-}
-
-export enum AFCTriggerer {
-    USER = "user",
-    VC_MODEL = "vc_model",
-}
-export enum DocType {
-    MATH = "MATH",
-    NONMATH = "NONMATH",
 }
 
 export interface AFCRequestProps {
@@ -77,7 +44,7 @@ export interface AFCRequestProps {
     expiryTime?: Date;
 }
 
-class AfcModel implements AFCRequestProps {
+export class AfcModel implements AFCRequestProps {
     static serviceName = "AfcModel";
 
     afcRequestId: string;
@@ -482,4 +449,4 @@ class AfcModel implements AFCRequestProps {
     }
 }
 
-export default AfcModel;
+

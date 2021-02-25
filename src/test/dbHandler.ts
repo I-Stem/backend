@@ -1,5 +1,5 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import * as mongoose from 'mongoose';
+import mongoose from 'mongoose';
 
 // May require additional time for downloading MongoDB binaries
 // jest.DEFAULT_TIMEOUT_INTERVAL = 600000;
@@ -14,7 +14,7 @@ let mongoServer: any;
 
 const createConnection = async () => {
     mongoServer = new MongoMemoryServer();
-    const mongoUri = await mongoServer.getConnectionString();
+    const mongoUri = await mongoServer.getUri();
     await mongoose.connect(mongoUri, opts, (err) => {
         if (err) {
             console.error(err);

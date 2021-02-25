@@ -1,18 +1,6 @@
-import loggerFactory from "../../middlewares/WinstonLogger";
-import MentorshipDbModel from "../../models/Mentorship";
-
-export const enum SignupAs {
-    MENTOR = "MENTOR",
-    MENTEE = "MENTEE",
-    BOTH = "BOTH",
-}
-
-export const enum ConnectOften {
-    ONCE_EVERY_WEEK = "ONCE_EVERY_WEEK",
-    ONCE_EVERY_OTHER_WEEK = "ONCE_EVERY_OTHER_WEEK",
-    ONCE_EVERY_MONTH = "ONCE_EVERY_MONTH",
-    ONCE_EVERY_3_MONTHS = "ONCE_EVERY_3_MONTHS",
-}
+import loggerFactory from "../../../middlewares/WinstonLogger";
+import MentorshipDbModel from "../../../models/Mentorship";
+import {ConnectOften, SignupAs} from "./MentorshipConstants";
 
 export interface MentorshipModelProps {
     _id: string;
@@ -39,7 +27,7 @@ export interface MentorshipModelProps {
     contactNumber: string;
 }
 
-class MentorshipModel {
+export class MentorshipModel {
     static ServiceName = "MentorshipModel";
 
     mentorshipId: string;
@@ -155,4 +143,4 @@ class MentorshipModel {
     }
 }
 
-export default MentorshipModel;
+

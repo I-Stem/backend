@@ -1,4 +1,5 @@
-import MessageModel, { MessageLabel } from "../domain/MessageModel";
+import {MessageModel} from '../domain/MessageModel';
+import { MessageLabel } from '../domain/MessageModel/MessageConstants';
 import MLModelModel from "../domain/MLModelModel";
 import UserModel from "../domain/user/User";
 

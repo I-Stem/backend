@@ -1,7 +1,9 @@
 import mongoose from "mongoose";
-import { UniversityRoles } from "../domain/organization/OrganizationModel";
-import { UserType } from "../domain/user";
-import { InvitedUser, InvitedUserEnum } from "../domain/InvitedUserModel";
+import { UniversityRoles } from "../domain/organization";
+import { UserType } from "../domain/user/UserConstants";
+import { InvitedUserEnum } from "../domain/InvitedUserModel/InvitedUserConstants";
+import {InvitedUserModel} from "../domain/InvitedUserModel";
+import loggerFactory from "../middlewares/WinstonLogger";
 
 const InvitedUserSchema = new mongoose.Schema(
     {
@@ -47,20 +49,28 @@ const InvitedUserSchema = new mongoose.Schema(
     }
 );
 
+
+
 /**
  *  Populate InvitedUser with verify Token
- */
-InvitedUserSchema.pre("insertMany", function (next, docs) {
-    docs.map((user: InvitedUser) => {
+
+InvitedUserSchema.pre<>("insertMany",  
+function( next, docs) {
+    docs.map((user: InvitedUserModel) => {
         const verifyToken = Buffer.from(
             (user.email + (Math.random() * 1000).toString).trim()
         ).toString("base64");
         user.verifyToken = verifyToken;
     });
-    next();
-});
-
-export default mongoose.model<InvitedUser & mongoose.Document>(
+},
+(error) => {
+    const logger = loggerFactory("InvitedUserDbModel", "preErrorCallback");
+    logger.error("encountered error in pre hook of insert many: %o", error)
+}
+);
+ */
+export default mongoose.model<InvitedUserModel & mongoose.Document>(
     "InvitedUser",
     InvitedUserSchema
 );
+

@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import { createResponse } from "../../utils/response";
-import AdminReviewModel, {
+import {AdminReviewModel} from "../../domain/AdminReviewModel";
+ import {
     ReviewRequestType,
-} from "../../domain/AdminReviewModel";
+} from "../../domain/AdminReviewModel/AdminReviewConstants";
 import * as HttpStatus from "http-status-codes";
 
 class AdminController {

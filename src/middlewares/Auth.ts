@@ -9,7 +9,7 @@ import { Request, Response, Application, NextFunction } from "express";
 import { response, createResponse } from "../utils/response";
 import * as HttpStatus from "http-status-codes";
 import loggerFactory from "./WinstonLogger";
-import { UniversityRoles } from "../domain/organization/OrganizationModel";
+import { UniversityRoles } from "../domain/organization";
 import { UserRoleEnum } from "../models/User";
 
 class Auth {

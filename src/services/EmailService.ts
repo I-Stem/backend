@@ -1,5 +1,5 @@
 import loggerFactory from "../middlewares/WinstonLogger";
-import MessageModel from "../domain/MessageModel";
+import {MessageModel} from "../domain/MessageModel";
 import EmailQueue from "../queues/message";
 import UserModel from "../domain/user/User";
 import { InvitedUser } from "../domain/InvitedUserModel";

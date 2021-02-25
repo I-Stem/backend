@@ -1,28 +1,8 @@
-import { query } from "express";
-import loggerFactory from "../../middlewares/WinstonLogger";
-import JobPreferencesDbModel from "../../models/JobPreferences";
-import UserModel from "../user/User";
-import User from "../../models/User";
-
-export const enum JobNature {
-    INTERNSHIP = "INTERNSHIP",
-    FULL_TIME = "FULL_TIME",
-    BOTH = "BOTH",
-}
-
-export const enum HighestQualification {
-    TENTH_STD = "10TH_STD",
-    TWELFTH_STD = "12TH_STD",
-    GRADUATE_DEGREE = "GRADUATE_DEGREE",
-    POST_GRADUATE_DEGREE = "POST_GRADUATE_DEGREE",
-}
-
-export const enum HiringAction {
-    IGNORED = "IGNORED",
-    SHORTLISTED = "SHORTLISTED",
-    COMMENTED = "COMMENTED",
-    CONTACTED = "CONTACTED",
-}
+import loggerFactory from "../../../middlewares/WinstonLogger";
+import JobPreferencesDbModel from "../../../models/JobPreferences";
+import UserModel from "../../user/User";
+import User from "../../../models/User";
+import {HighestQualification, JobNature, HiringAction} from "./JobPreferencesConstants";
 
 export class HiringActionLog {
     action?: HiringAction;
@@ -39,7 +19,7 @@ export class HiringActionLog {
     }
 }
 
-class JobPreferencesModel {
+export class JobPreferencesModel {
     static ServiceName = "JobPreferencesModel";
 
     userId: string = "";
@@ -96,4 +76,4 @@ class JobPreferencesModel {
     }
 }
 
-export default JobPreferencesModel;
+

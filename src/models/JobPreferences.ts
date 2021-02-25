@@ -1,11 +1,11 @@
 import { string } from "@hapi/joi";
 import mongoose from "mongoose";
 import { type } from "os";
-import JobPreferencesModel, {
+import {JobPreferencesModel,     HiringActionLog} from "../domain/Community/JobPreferencesModel";
+import {
     HighestQualification,
-    HiringActionLog,
     JobNature,
-} from "../domain/Community/JobPreferencesModel";
+} from "../domain/Community/JobPreferencesModel/JobPreferencesConstants";
 
 const JobPreferencesSchema = new mongoose.Schema(
     {

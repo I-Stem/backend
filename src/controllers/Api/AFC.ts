@@ -14,19 +14,21 @@ import AfcResponseQueue from "../../queues/afcResponse";
 import loggerFactory from "../../middlewares/WinstonLogger";
 import { getFormattedJson } from "../../utils/formatter";
 import emailService from "../../services/EmailService";
-import AfcModel, {
+import {AfcModel} from "../../domain/AfcModel";
+import {
     AFCRequestStatus,
     AFCTriggerer,
     DocType,
-} from "../../domain/AfcModel";
+} from "../../domain/AfcModel/AFCConstants";
 import UserModel from "../../domain/user/User";
 import FileModel from "../../domain/FileModel";
 import ExceptionTemplates from "../../MessageTemplates/ExceptionTemplates";
 import FeedbackTemplates from "../../MessageTemplates/FeedbackTemplates";
-import EscalationModel, {
+import {EscalationModel} from "../../domain/EscalationModel";
+import {
     AIServiceCategory,
     EscalationStatus,
-} from "../../domain/EscalationModel";
+} from "../../domain/EscalationModel/EscalationConstants";
 import LedgerModel from "../../domain/LedgerModel";
 import Credits from "../../domain/Credit";
 import ServiceRequestTemplates from "../../MessageTemplates/ServiceRequestTemplates";

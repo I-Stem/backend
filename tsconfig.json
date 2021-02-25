@@ -1,11 +1,12 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    "target": "ESNext",
+"lib": ["ES6"],
     "module": "commonjs",
+"moduleResolution": "node",
+"allowSyntheticDefaultImports": true,
 "esModuleInterop": true,
-    "strict": true,
-    "allowJs": true,
-    "checkJs": true, 
+"preserveSymlinks":true,
     "declaration": true,
     "removeComments": true,
     "noImplicitAny": false,
@@ -13,11 +14,13 @@
     "outDir": "dist/",
     "sourceMap": true,
     "skipLibCheck": true,
-    "baseUrl": ".",
+   "baseUrl": ".",
+"rootDir": "./src",
     "paths": {
       "underscore": ["lodash"],
       "@lip/constants": ["src/constants"],
       "@lip/controllers": ["src/controllers"],
+"@backend/*": ["src/*"],
       "@lip/exceptions": ["src/exceptions"],
       "@lip/interfaces": ["src/interfaces"],
       "@lip/middlewares": ["src/middlewares"],
@@ -49,7 +52,7 @@
     "**/*.test.ts",
      "**/*SetupTest.spec.ts", 
     "**/*.spec.ts",
-    "test/*",
+    "src/seed/*",
     ".babelrc"
   ]
 }

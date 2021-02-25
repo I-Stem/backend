@@ -1,7 +1,9 @@
 import { getFormattedJson } from "../utils/formatter";
 import { InvitedUser } from "../domain/InvitedUserModel";
-import MessageModel, { MessageLabel } from "../domain/MessageModel";
-import UserModel, { UserType } from "../domain/user/User";
+import {MessageModel} from "../domain/MessageModel";
+import { MessageLabel } from "../domain/MessageModel/MessageConstants";
+import UserModel from "../domain/user/User";
+import { UserType } from "../domain/user/UserConstants";
 
 export const enum AuthMessageTemplateNames {
     ACCOUNT_EMAIL_VERIFICATION = "ACCOUNT_EMAIL_VERIFICATION",

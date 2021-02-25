@@ -6,11 +6,12 @@
 import { IVC } from "../interfaces/models/vc";
 import mongoose from "mongoose";
 import ReviewSchema from "./Review";
-import VcModel, {
+import {VcModel} from "../domain/VcModel";
+import {
     VCRequestStatus,
     VideoExtractionType,
     CaptionOutputFormat,
-} from "../domain/VcModel";
+} from "../domain/VcModel/VCConstants";
 
 const mongooseFuzzySearching = require("mongoose-fuzzy-searching");
 

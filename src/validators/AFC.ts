@@ -4,7 +4,7 @@
  */
 
 import * as Joi from '@hapi/joi';
-import {AFCRequestOutputFormat} from "../domain/AfcModel";
+import {AFCRequestOutputFormat} from "../domain/AfcModel/AFCConstants";
 
 const afcSchema = Joi.object({
     documentName: Joi.string(),
