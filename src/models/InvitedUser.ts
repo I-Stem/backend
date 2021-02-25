@@ -51,7 +51,7 @@ const InvitedUserSchema = new mongoose.Schema(
  *  Populate InvitedUser with verify Token
  */
 
-InvitedUserSchema.pre("insertMany", function (docs, next) {
+InvitedUserSchema.pre("insertMany",  (docs, next) => {
     docs.map((user: InvitedUser) => {
         const verifyToken = Buffer.from(
             (user.email + (Math.random() * 1000).toString).trim()
