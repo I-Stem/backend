@@ -10,7 +10,7 @@ import Template from '../models/Template';
 import User from '../models/User';
 import Message from '../models/Message';
 import EmailService from '../services/EmailService';
-import MessageModel from '../domain/MessageModel';
+import {MessageModel} from '../domain/MessageModel';
 
 class MessageQueue {
     public queue: any;

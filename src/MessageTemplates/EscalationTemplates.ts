@@ -1,6 +1,7 @@
 import FileModel from "../domain/FileModel";
 import UserModel from "../domain/user/User";
-import MessageModel, { MessageLabel } from "../domain/MessageModel";
+import {MessageModel} from "../domain/MessageModel";
+import { MessageLabel } from "../domain/MessageModel/MessageConstants";
 
 export enum EscalationTemplateNames {
     RAISE_AFC_ESCALATION_TICKET = "RAISE_AFC_ESCALATION_TICKET",

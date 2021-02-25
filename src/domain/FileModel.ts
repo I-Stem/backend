@@ -4,7 +4,6 @@ import loggerFactory from "../middlewares/WinstonLogger";
 import {VcModel} from "./VCModel";
 import { VCRequestStatus, VideoExtractionType } from "./VcModel/VCConstants";
 import emailService from "../services/EmailService";
-import MessageModel, { MessageLabel } from "./MessageModel";
 import ExceptionMessageTemplates, {
     ExceptionTemplateNames,
 } from "../MessageTemplates/ExceptionTemplates";

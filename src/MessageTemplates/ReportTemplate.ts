@@ -1,5 +1,6 @@
 import UserModel from "../domain/user/User";
-import MessageModel, { MessageLabel } from "../domain/MessageModel";
+import {MessageModel} from '../domain/MessageModel';
+import { MessageLabel } from '../domain/MessageModel/MessageConstants';
 
 export const enum ReportMessageTemplateNames {
     METRICS_REPORT = "METRICS_REPORT",

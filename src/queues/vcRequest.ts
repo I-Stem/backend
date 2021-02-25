@@ -13,7 +13,6 @@ import { VCRequestStatus } from '../domain/VcModel/VCConstants';
 import FileModel from '../domain/FileModel';
 import got from 'got';
 import emailService from '../services/EmailService';
-import MessageModel, { MessageLabel } from '../domain/MessageModel';
 import ExceptionMessageTemplates, { ExceptionTemplateNames } from '../MessageTemplates/ExceptionTemplates';
 import { getFormattedJson } from '../utils/formatter';
 import VcResponseQueue from './VcResponse';

@@ -1,5 +1,6 @@
 import loggerFactory from '../middlewares/WinstonLogger';
-import MessageModel, { MessageLabel } from '../domain/MessageModel';
+import {MessageModel} from '../domain/MessageModel';
+import { MessageLabel } from '../domain/MessageModel/MessageConstants';
 import UserModel from '../domain/user/User';
 import {AfcModel} from '../domain/AfcModel';
 import { getFormattedJson } from '../utils/formatter';

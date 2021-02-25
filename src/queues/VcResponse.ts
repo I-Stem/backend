@@ -9,7 +9,6 @@ import { VCRequestStatus, VideoExtractionType } from '../domain/VcModel/VCConsta
 import FileModel from '../domain/FileModel';
 import got from 'got';
 import emailService from '../services/EmailService';
-import MessageModel, { MessageLabel } from '../domain/MessageModel';
 import ExceptionMessageTemplates, { ExceptionTemplateNames } from '../MessageTemplates/ExceptionTemplates';
 import { getFormattedJson } from '../utils/formatter';
 
