@@ -53,7 +53,7 @@ export interface IUserModel extends mongoose.Document {
 
 
 
-    billingAddress(): string;
+
     comparePassword(password: string, cb: any): string;
     validPassword(password: string, cb: any): string;
     gravatar(_size: number): string;
@@ -208,17 +208,6 @@ UserSchema.pre<IUserModel>("save", async function (_next) {
     return _next();
 });
 
-// Custom Methods
-// Get user's full billing address
-UserSchema.methods.billingAddress = function (): string {
-    const methodname = "billingAddress";
-    const logger = loggerFactory(servicename, methodname);
-
-    const fulladdress = `${this.fullname.trim()} ${this.geolocation.trim()}`;
-    logger.info(`Billing address: ${fulladdress}`);
-
-    return fulladdress;
-};
 
 // create the user's password with the request password
 UserSchema.methods.generatePassword = function (
@@ -228,7 +217,7 @@ UserSchema.methods.generatePassword = function (
     const hash = bcrypt.hashSync(_requestPassword, saltRounds);
     return hash;
 };
-
+/*
 // Compares the user's password with the request password
 UserSchema.methods.comparePassword = function (
     _requestPassword: string,
@@ -396,7 +385,7 @@ UserSchema.methods.checkCredits = async function (
         },
     ]).exec();
 };
-
+*/
 UserSchema.virtual("currentStatus").get(function (this: { statusLog: [] }) {
     return this.statusLog[this.statusLog.length - 1];
 });
