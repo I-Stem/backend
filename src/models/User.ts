@@ -16,7 +16,43 @@ import { UniversityRoles } from "../domain/organization";
 const mongooseFuzzySearching = require("mongoose-fuzzy-searching");
 const servicename = "User";
 // Create the model schema & register your custom methods here
-export interface IUserModel extends IUser, mongoose.Document {
+export interface IUserModel extends mongoose.Document {
+    fullname: string;
+    gender?: string;
+    email: string;
+    password: string;
+    isVerified: boolean;
+    userType: UserType;
+    verifyUserToken: string;
+    verifyUserExpires: Date;
+
+
+    steam?: string;
+
+    passwordResetToken?: string;
+    passwordResetExpires: Date;
+
+    geolocation?: string;
+    website?: string;
+    picture?: string;
+
+    organizationName?: string;
+    organisationAddress?: string;
+    role: UserRoleEnum | UniversityRoles | OtherUserRoles;
+    accessRequestSent?: boolean;
+
+    organizationCode: string;
+    deductCredits(amount: number, reason: string): void;
+    rollNumber?: string;
+    serviceRole: ServiceRoleEnum;
+    oauthProvider: OAuthProvider;
+    oauthProviderId: string;
+    //    generateResetExpiryDate(): Date;
+    // generateResetToken(_passwordResetExpires: Date): string;
+
+
+
+
     billingAddress(): string;
     comparePassword(password: string, cb: any): string;
     validPassword(password: string, cb: any): string;
