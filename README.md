@@ -1,5 +1,7 @@
-[![Maintainability](https://api.codeclimate.com/v1/badges/0abf5009e604ee7d2271/maintainability)](https://codeclimate.com/github/I-Stem/backend/maintainability)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/0abf5009e604ee7d2271/test_coverage)](https://codeclimate.com/github/I-Stem/backend/test_coverage)
+# Devops Metrics
+
+- [![Maintainability](https://api.codeclimate.com/v1/badges/0abf5009e604ee7d2271/maintainability)](https://codeclimate.com/github/I-Stem/backend/maintainability)
+- [![Test Coverage](https://api.codeclimate.com/v1/badges/0abf5009e604ee7d2271/test_coverage)](https://codeclimate.com/github/I-Stem/backend/test_coverage)
 
 
 # Introduction
