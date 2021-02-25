@@ -1,7 +1,7 @@
 import FileDbModel from "../models/File";
 import { plainToClass } from "class-transformer";
 import loggerFactory from "../middlewares/WinstonLogger";
-import {VcModel} from "./VCModel";
+import {VcModel} from "./VcModel";
 import { VCRequestStatus, VideoExtractionType } from "./VcModel/VCConstants";
 import emailService from "../services/EmailService";
 import ExceptionMessageTemplates, {

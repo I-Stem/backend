@@ -5,7 +5,7 @@ import * as HttpStatus from 'http-status-codes';
 import { response } from '../../../utils/response';
 import FeedbackModel, { FeedbackCategory, feedbackFormTitles } from '../../../domain/FeedbackModel';
 import {AfcModel} from '../../../domain/AfcModel';
-import {VcModel} from '../../../domain/VCModel';
+import {VcModel} from '../../../domain/VcModel';
 import {EscalationModel} from '../../../domain/EscalationModel';
 import {plainToClass} from 'class-transformer';
 import MessageQueue from '../../../queues/message';

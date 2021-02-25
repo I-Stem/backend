@@ -7,7 +7,7 @@ import {AfcModel} from "../AfcModel";
 import { AFCRequestOutputFormat, AFCRequestStatus } from "../AfcModel/AFCConstants";
 import FileModel from "../FileModel";
 import UserModel from "../user/User";
-import {VcModel} from "../VCModel";
+import {VcModel} from "../VcModel";
 import { VCRequestStatus, VideoExtractionType } from "../VcModel/VCConstants";
 import AfcResponseQueue from "../../queues/afcResponse";
 import User from "../../models/User";
