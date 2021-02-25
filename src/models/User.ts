@@ -26,7 +26,7 @@ export interface IUserModel extends mongoose.Document {
     verifyUserToken: string;
     verifyUserExpires: Date;
 
-toekns:any[];
+tokens:any[];
     steam?: string;
 
     passwordResetToken?: string;
