@@ -1,9 +1,12 @@
 import { expect } from "chai";
-import MongoServer from "../dbHandler";
-import OrganizationModel from "../../domain/organization/OrganizationModel";
+import db from "../dbHandler";
+import OrganizationModel, {
+    University,
+} from "../../domain/organization/OrganizationModel";
 import UserModel from "../../domain/user/User";
 import { OAuthProvider, UserType } from "../../domain/user/UserConstants";
 import { ServiceRoleEnum } from "../../models/User";
+import { UniversityAccountStatus } from "../../domain/organization";
 
 describe("Unit tests for organization flow", () => {
     const organizationName = "I-Stem";
@@ -12,32 +15,38 @@ describe("Unit tests for organization flow", () => {
         "_" +
         new Date().getTime();
     let user: UserModel | null;
+    let org: OrganizationModel | null;
     before(async () => {
-        await MongoServer.createConnection();
+        await db.createConnection();
         user = await new UserModel({
-            email: "suman@inclusivestem.org",
-            fullname: "Suman Kumar",
+            email: "user@inclusivestem.org",
+            fullname: "John Doe",
             oauthProvider: OAuthProvider.PASSWORD,
             organizationCode: organizationCode,
             serviceRole: ServiceRoleEnum.REGULAR,
             userType: UserType.I_STEM,
         }).persist();
-        expect(user?.fullname).equal("Suman Kumar");
+        expect(user?.fullname).equal("John Doe");
     });
 
-    it("creates a new university", async () => {
+    it("should create a new organization", async function () {
         const organizationName = "I-Stem";
-        const org = new OrganizationModel({
+        await new OrganizationModel({
             code: organizationCode,
             name: organizationName,
+        }).persistUniversity(user?.userId || "");
+    });
+    describe("university model", function () {
+        it("should return university model by university code", async function () {
+            org = await OrganizationModel.getUniversityByCode(organizationCode);
         });
-        console.log(user);
-        await org.persistUniversity(user?.userId || "");
+        it("should change account status to APPROVED", async function () {
+            await org.changeAccountStatusTo(UniversityAccountStatus.APPROVED);
+        });
     });
 
     after(async () => {
-        await MongoServer.cleanup();
-        await MongoServer.closeConnection();
+        await db.cleanup();
+        await db.closeConnection();
     });
-
 });

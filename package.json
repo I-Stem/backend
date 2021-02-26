@@ -155,7 +155,8 @@
       "ts-node/register"
     ],
     "reporter": [
-      "html"
+      "html",
+      "text"
     ],
     "sourceMap": true,
     "instrument": true,
