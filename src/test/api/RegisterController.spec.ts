@@ -1,5 +1,5 @@
 import request from "supertest";
-import app from "../../routes/Api";
+import Express from "../../providers/Express";
 import { UserType } from "../../domain/user/UserConstants";
 import db from "../dbHandler";
 import { expect } from "chai";
@@ -7,7 +7,7 @@ import { expect } from "chai";
 describe("User API endpoint tests", function () {
     const data = {
         userType: UserType.I_STEM,
-        verificationLink: "",
+        verificationLink: "http://www.example.com",
         email: "suman@inclusivestem.org",
         password: "password@123",
         fullname: "JOHN DOE",
@@ -17,8 +17,8 @@ describe("User API endpoint tests", function () {
         await db.createConnection();
     });
     it("POST /auth/register", async () => {
-        const response = await request(app)
-            .post("/auth/register")
+        const response = await request(Express.init())
+            .post("/api/auth/register")
             .set("Accept", "application/json")
             .send(data);
         expect(response.status).equals(200);
