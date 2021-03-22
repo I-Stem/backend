@@ -19,7 +19,7 @@ describe("Test for user model lifecycle", function () {
             });
             
     it("Should create a successful user", async function () {
-        await UserModel.registerUser({
+        const user = await UserModel.registerUser({
             email: "john@universe.world",
             fullname: "john hopkins",
             userType: UserType.I_STEM,

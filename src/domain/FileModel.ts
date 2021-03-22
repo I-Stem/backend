@@ -1,13 +1,13 @@
 import FileDbModel from "../models/File";
 import { plainToClass } from "class-transformer";
 import loggerFactory from "../middlewares/WinstonLogger";
-import {VcModel} from "./VcModel";
+import { VcModel } from "./VcModel";
 import { VCRequestStatus, VideoExtractionType } from "./VcModel/VCConstants";
 import emailService from "../services/EmailService";
 import ExceptionMessageTemplates, {
     ExceptionTemplateNames,
 } from "../MessageTemplates/ExceptionTemplates";
-import {AfcModel} from "./AfcModel";
+import { AfcModel } from "./AfcModel";
 import { AFCRequestStatus, DocType } from "./AfcModel/AFCConstants";
 import UserModel from "./user/User";
 import { saveOCRjson } from "../utils/file";
@@ -19,9 +19,9 @@ export interface IFileModel {
     users: string[];
     name: string;
     hash: string;
-    size: number;
+    size?: number;
     inputURL: string;
-    json: any;
+    json?: any;
     pages?: number;
     OCRVersion?: string;
     videoLength?: number; // in seconds
@@ -31,19 +31,19 @@ export interface IFileModel {
     createdAt?: Date;
     ocrFileURL?: string;
     mathOcrFileUrl?: string;
-    mathOcrWaitingQueue: string[];
+    mathOcrWaitingQueue?: string[];
 }
 
 class FileModel implements IFileModel {
-    static serviceName = 'FileModel';
+    static serviceName = "FileModel";
 
-    fileId: string = '';
+    fileId: string = "";
     users: string[] = [];
-    name: string = '';
+    name: string = "";
     hash: string;
     size: number = 0;
-    inputURL: string = '';
-    json: any;
+    inputURL: string = "";
+    json?: any;
     pages?: number;
     videoLength?: number;
     externalVideoId?: string;
@@ -56,7 +56,7 @@ class FileModel implements IFileModel {
     mathOcrWaitingQueue: string[];
 
     constructor(props: IFileModel) {
-        this.fileId = props.fileId || props._id || '';
+        this.fileId = props.fileId || props._id || "";
         this.users = props.users;
         this.name = props.name;
         this.hash = props.hash;
@@ -74,6 +74,21 @@ class FileModel implements IFileModel {
         this.mathOcrFileUrl = props.mathOcrFileUrl || "";
         this.mathOcrWaitingQueue = props.mathOcrWaitingQueue;
     }
+    /**
+     * Persist new file information
+     */
+    async persist(): Promise<FileModel> {
+        const logger = loggerFactory(FileModel.serviceName, "persist");
+        logger.info("persisting file");
+        try {
+            const fileDoc = await FileDbModel.create(this);
+            this.fileId = fileDoc.id;
+            logger.info("Persisted file Id: " + fileDoc.id);
+            return fileDoc;
+        } catch (err) {
+            logger.error("Error occured: %o" + err);
+        }
+    }
 
     /**
      * Returns true if the Doc Type is Math
@@ -89,7 +104,7 @@ class FileModel implements IFileModel {
     public async addRequestToWaitingQueue(requestId: string, docType: DocType) {
         const logger = loggerFactory(
             FileModel.serviceName,
-            'addRequestToWaitingQueue'
+            "addRequestToWaitingQueue"
         );
         logger.info(
             "adding request to waiting queue: " + requestId + " " + docType
@@ -116,7 +131,7 @@ class FileModel implements IFileModel {
     public async clearWaitingQueue(docType: DocType) {
         const logger = loggerFactory(
             FileModel.serviceName,
-            'clearWaitingQueue'
+            "clearWaitingQueue"
         );
         logger.info("clearing the waiting queue");
         if (FileModel.isMathDocType(docType)) {
@@ -133,11 +148,11 @@ class FileModel implements IFileModel {
     }
 
     public async updateOCRVersion(OCRVersion: string) {
-        const logger = loggerFactory(FileModel.serviceName, 'updateOCRVersion');
-        logger.info('updatring OCR version to: ' + OCRVersion);
+        const logger = loggerFactory(FileModel.serviceName, "updateOCRVersion");
+        logger.info("updatring OCR version to: " + OCRVersion);
         this.OCRVersion = OCRVersion;
         await FileDbModel.findByIdAndUpdate(this.fileId, {
-            OCRVersion: OCRVersion
+            OCRVersion: OCRVersion,
         }).exec();
     }
 
@@ -184,9 +199,9 @@ class FileModel implements IFileModel {
     ) {
         const logger = loggerFactory(
             FileModel.serviceName,
-            'updateConvertedFiles'
+            "updateConvertedFiles"
         );
-        logger.info('updating output results in file model');
+        logger.info("updating output results in file model");
         this.outputFiles.set(requestType, outputURL);
         this.videoLength = videoLength;
         try {
@@ -194,12 +209,12 @@ class FileModel implements IFileModel {
             logger.info(`setting value for field: ${fieldName}`);
             const file = await FileDbModel.findByIdAndUpdate(this.fileId, {
                 $set: {
-                    [fieldName]: outputURL
-                }
+                    [fieldName]: outputURL,
+                },
             }).exec();
         } catch (error) {
             logger.error(
-                'couldn\'t update the converted file information %o',
+                "couldn't update the converted file information %o",
                 error
             );
         }
@@ -207,19 +222,19 @@ class FileModel implements IFileModel {
 
     public async updateVideoId(videoId: string) {
         await FileDbModel.findByIdAndUpdate(this.fileId, {
-            externalVideoId: videoId
+            externalVideoId: videoId,
         }).lean();
     }
 
     public static async getFileByHash(
         fileHash: string
     ): Promise<FileModel | null> {
-        const logger = loggerFactory(FileModel.serviceName, 'getFileByHash');
+        const logger = loggerFactory(FileModel.serviceName, "getFileByHash");
         const file = await FileDbModel.findOne({ hash: fileHash }).lean();
         if (file !== null) {
             return new FileModel(file);
         } else {
-            logger.error('couldn\'t get file by hash');
+            logger.error("couldn't get file by hash");
         }
 
         return null;
@@ -232,35 +247,35 @@ class FileModel implements IFileModel {
     public static async getFileByExternalVideoId(videoId: string) {
         const logger = loggerFactory(
             FileModel.serviceName,
-            'getFileByExternalVideoId'
+            "getFileByExternalVideoId"
         );
         const file = await FileDbModel.findOne({
-            externalVideoId: videoId
+            externalVideoId: videoId,
         }).lean();
         if (file !== null) {
             return new FileModel(file);
         } else {
-            logger.error('couldn\'t get file by video id');
+            logger.error("couldn't get file by video id");
         }
 
         return null;
     }
 
     public static async getFileById(fileId: string) {
-        const logger = loggerFactory(FileModel.serviceName, 'getFileById');
+        const logger = loggerFactory(FileModel.serviceName, "getFileById");
         try {
             const fileDocument = await FileDbModel.findById(fileId).lean();
             if (!fileDocument) {
-                logger.error('couldn\'t get file by id: ' + fileId);
+                logger.error("couldn't get file by id: " + fileId);
             } else {
                 const fileModelInstance = new FileModel(fileDocument);
                 return fileModelInstance;
             }
         } catch (error) {
-            logger.error('error while retrieving file by id: %o', error);
+            logger.error("error while retrieving file by id: %o", error);
         }
 
-        logger.error('couldn\'t get file with id: ' + fileId);
+        logger.error("couldn't get file with id: " + fileId);
         return null;
     }
 

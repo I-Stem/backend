@@ -102,7 +102,7 @@ class Express {
         this.express = ExceptionHandler.notFoundHandler(this.express);
 
         // Start the server on the specified port
-        this.express.listen(port, () => {
+        return this.express.listen(port, () => {
             this.mountCron();
             this.mountProcessCron();
             return logger.info(`Server :: Running @ 'http://localhost:${port}'`);
