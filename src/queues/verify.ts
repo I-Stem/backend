@@ -58,7 +58,7 @@ class VerifyQueue {
                 if (err) {
                     logger.error(err.message);
                 } else {
-                    ArchivedUser.insertMany(data, (err: Error) => {
+                    ArchivedUser.insertMany(data, {}, (err: Error) => {
                         if (err) {
                             logger.error(err.message);
                         } else {
@@ -66,7 +66,7 @@ class VerifyQueue {
                         }
                     });
                     const userIds = data.map(value => value._id);
-                    User.deleteMany({_id: {$in: userIds }}, (err: Error) => {
+                    User.deleteMany({_id: {$in: userIds }}, {}, (err: Error) => {
                         if (err) {
                             logger.error(err.message);
                         } else {
