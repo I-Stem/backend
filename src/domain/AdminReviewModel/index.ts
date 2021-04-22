@@ -1,8 +1,9 @@
-import { ServiceRoleEnum } from "../../models/User";
+import { ServiceRoleEnum } from "../../domain/user/UserConstants";
 import loggerFactory from "../../middlewares/WinstonLogger";
 import AdminReviewDb from "../../models/AdminReview";
 import UserModel from "../user/User";
 import {ReviewEnum, ReviewRequestType, AdminReviewStatus} from "./AdminReviewConstants";
+import {OrganizationRequestedType} from "../organization/OrganizationConstants";
 
 class ServiceRoleRequest {
     userId: string;
@@ -23,17 +24,23 @@ class ServiceRoleRequest {
 }
 
 class OrganizationRequest {
-    organizationCode: string;
     organizationName?: string;
-    userId?: string;
+    userName?: string;
+    organizationType?: OrganizationRequestedType;
+    userEmail?: string;
+    organizationCode?: string;
     constructor(
-        organizationCode: string,
-        userId?: string,
-        organizationName?: string
+        organizationName?: string,
+        userName?: string,
+        organizationType?: OrganizationRequestedType,
+        userEmail?: string,
+        organizationCode?: string
     ) {
-        this.userId = userId;
-        this.organizationCode = organizationCode;
+        this.organizationType = organizationType;
         this.organizationName = organizationName;
+        this.userEmail = userEmail;
+        this.userName = userName;
+        this.organizationCode = organizationCode;
     }
 }
 
@@ -77,7 +84,6 @@ interface AdminReviewModelProps {
     reviewerId?: string;
 }
 
-
 export class AdminReviewModel implements AdminReviewModelProps {
     serviceRoleRequest?: ServiceRoleRequest;
     organizationRequest?: OrganizationRequest;
@@ -120,7 +126,9 @@ export class AdminReviewModel implements AdminReviewModelProps {
         const logger = loggerFactory(AdminReviewModel.serviceName, "persist");
         this.statusLog = [];
         this.statusLog?.push(new StatusLifeCycle(this.status, new Date()));
-        logger.info("Persisting request for admin review");
+        logger.info(
+            `Persisting request for admin review: ${JSON.stringify(this)}`
+        );
         await new AdminReviewDb(this).save((err: any) => {
             if (err) {
                 logger.error(`Error persisting data, ${err}`);
@@ -259,7 +267,7 @@ export class AdminReviewModel implements AdminReviewModelProps {
                 reviewerId: this.reviewerId,
             },
             $push: {
-                statusLog: new StatusLifeCycle(this.status, new Date())
+                statusLog: new StatusLifeCycle(this.status, new Date()),
             },
         }).exec();
     }
@@ -281,14 +289,13 @@ export class AdminReviewModel implements AdminReviewModelProps {
                 fullName: user?.fullname,
             };
         } else if (request?.requestType === ReviewRequestType.ORGANIZATION) {
-            const user = await UserModel.getUserById(
-                request.organizationRequest?.userId || ""
-            );
+            const { organizationRequest } = request;
             return {
-                organizationName: request.organizationRequest?.organizationName,
-                fullName: user?.fullname,
-                email: user?.email,
-                orgCode: request.organizationRequest?.organizationCode,
+                organizationName: organizationRequest?.organizationName,
+                fullName: organizationRequest?.userName,
+                email: organizationRequest?.userEmail,
+                orgType: organizationRequest?.organizationType,
+                orgCode: organizationRequest?.organizationCode
             };
         }
         return {

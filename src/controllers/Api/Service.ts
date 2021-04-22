@@ -9,7 +9,7 @@ import AuthTemplates from "../../MessageTemplates/AuthTemplates";
 import loggerFactory from "../../middlewares/WinstonLogger";
 import UserModel from "../../domain/user/User";
 import ServiceRequestTemplates from "../../MessageTemplates/ServiceRequestTemplates";
-import User, { ServiceRoleEnum, UserStatusEnum } from "../../models/User";
+import { ServiceRoleEnum, UserStatusEnum } from "../../domain/user/UserConstants";
 import {AdminReviewModel} from "../../domain/AdminReviewModel";
 import {
     AdminReviewStatus,

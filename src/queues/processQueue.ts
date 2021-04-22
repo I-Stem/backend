@@ -7,13 +7,15 @@ import Locals from "../providers/Locals";
 import loggerFactory from "../middlewares/WinstonLogger";
 import {AfcModel} from '../domain/AfcModel';
 import {VcModel} from "../domain/VcModel";
+import {AFCProcess} from "../domain/AFCProcess";
+
 /**
  *  AFC Process Queue for finding the status of every afc request.
  *  Time Interval: Past 2 Hrs to Past 1 Hr.
  *  If the request status is in waiting stage or initiated, mark them as failure and send internal diagonstic email
  */
 
-class ProcessQueue {
+ class ProcessQueue {
     public queue: any;
     static servicename = "Process Queue";
     constructor() {
@@ -72,7 +74,7 @@ class ProcessQueue {
                 date.getTime() - 1000 * 60 * 60
             ).toISOString();
             const now = date.toISOString();
-            AfcModel.afcCronHandler(hourAgo, now);
+            AFCProcess.afcCronHandler(hourAgo, now);
             VcModel.vcCronHandler(hourAgo, now);
             _done();
         });

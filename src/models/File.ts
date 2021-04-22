@@ -6,22 +6,47 @@
 import FileModel from "../domain/FileModel";
 import mongoose from "mongoose";
 import { DocType } from "../domain/AfcModel/AFCConstants";
+import { FileProcessAssociations } from "../domain/FileModel/FileConstants";
+
+const processAssociations = Object.keys(FileProcessAssociations).map(key => FileProcessAssociations[key]);
 
 export const FileSchema = new mongoose.Schema(
     {
-        users: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+        userContexts: [{ 
+            userId: {
+                type: mongoose.Schema.Types.ObjectId, 
+                ref: "User" 
+            },
+            processAssociation: {
+                type: String,
+                required: true,
+                enum: processAssociations
+            },
+            organizationCode: {
+                type: String,
+                required :true
+            },
+            associatedAt: {
+                type: Date
+            }
+        }],
         name: { type: String, index: true },
         hash: { type: String, unique: true },
         size: { type: Number },
         inputURL: { type: String },
-        json: { type: Object },
+        mimetype: {type: String},
         pages: { type: Number },
+        isRemediated: {type: Boolean},
         videoLength: { type: Number },
         externalVideoId: {
             type: String,
             index: true,
         },
-        outputFiles: { type: Map, of: String },
+        outputFiles: { type: Map,
+         of: String},
+
+        container: {type: String, required: true},
+        fileKey: {type: String},
         ocrWaitingQueue: [
             {
                 type: mongoose.Schema.Types.ObjectId,
@@ -37,7 +62,7 @@ export const FileSchema = new mongoose.Schema(
                 ref: ["AFC", "VideoCaptioning"],
             },
         ],
-        remediatedFileName: { type: String },
+        remediatedFileName: { type: String }
     },
     {
         id: true,
@@ -50,3 +75,4 @@ export const FileSchema = new mongoose.Schema(
 const File = mongoose.model<FileModel & mongoose.Document>("File", FileSchema);
 
 export default File;
+

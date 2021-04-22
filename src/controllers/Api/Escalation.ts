@@ -3,10 +3,11 @@ import User, { IUserModel } from "../../models/User";
 import { createResponse, response } from "../../utils/response";
 import * as HttpStatus from "http-status-codes";
 import Escalation from "../../models/Escalation";
-
 import loggerFactory from "../../middlewares/WinstonLogger";
 import {EscalationModel} from "../../domain/EscalationModel";
 import File from "../../models/File";
+import {UserType, UserRoleEnum} from "../../domain/user/UserConstants";
+import {UniversityRoles} from "../../domain/organization/OrganizationConstants";
 
 class EscalationController {
     static servicename = "Escalation Controller";
@@ -18,11 +19,21 @@ class EscalationController {
         );
         let escalations: any = [];
         try {
+            if(res.locals.user.userType === UserType.I_STEM && (res.locals.user.role === UniversityRoles.REMEDIATOR || res.locals.user.role === UserRoleEnum.ADMIN)) {
+escalations = await EscalationModel.getEscalations(
+    String(req.query.status),
+    String(req.query.service)
+);
+            } 
+            else 
+return createResponse(res, HttpStatus.BAD_REQUEST, "wrong request");
+            /*
             escalations = await EscalationModel.getEscalationsByOrganization(
                 res.locals.user.organizationCode,
                 String(req.query.status),
                 String(req.query.service)
             );
+            */
         } catch (err) {
             logger.error("Escalations not found");
         }
@@ -78,11 +89,11 @@ class EscalationController {
         );
 
         try {
-            await EscalationModel.updateReimediatedFile(
-                req.body.id,
-                req.body.inputFileLink
+            const remediationProcess = await EscalationModel.getRemediationProcessById(req.body.id);
+            await remediationProcess?.completePostRemediationProcessing(
+                req.body.inputFileId
             );
-            await EscalationModel.notifyEscalator(req.body.id);
+            //await EscalationModel.notifyEscalator(req.body.id);
         } catch (error) {
             logger.error("Error occured");
         }

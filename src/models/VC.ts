@@ -12,6 +12,7 @@ import {
     VideoExtractionType,
     CaptionOutputFormat,
 } from "../domain/VcModel/VCConstants";
+import { HandleAccessibilityRequests } from "../domain/organization/OrganizationConstants";
 
 const mongooseFuzzySearching = require("mongoose-fuzzy-searching");
 
@@ -26,6 +27,13 @@ export const VCSchema = new mongoose.Schema(
     {
         correlationId: { type: String },
         userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        organizationCode: { type: String },
+        associatedProcessId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "VCProccess",
+            index: true,
+        },
+        escalationId: { type: String },
         requestType: {
             type: String,
             enum: [
@@ -34,8 +42,18 @@ export const VCSchema = new mongoose.Schema(
                 VideoExtractionType.OCR_CAPTION,
             ],
         },
-        inputFileId: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
+        inputFileId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "File",
+            index: true,
+        },
+        inputFileLink: { type: String },
         outputURL: { type: String },
+        outputFile: {
+            container: { type: String },
+            fileKey: { type: String },
+            fileId: { type: mongoose.Schema.Types.ObjectId, ref: "file" },
+        },
         modelName: { type: String, default: "standard-@" },
         documentName: { type: String },
         videoLength: { type: Number }, // seconds
@@ -45,6 +63,7 @@ export const VCSchema = new mongoose.Schema(
                 VCRequestStatus.INITIATED,
                 VCRequestStatus.INDEXING_REQUESTED,
                 VCRequestStatus.INDEXING_REQUEST_FAILED,
+                VCRequestStatus.INDEXING_SKIPPED,
                 VCRequestStatus.CALLBACK_RECEIVED,
                 VCRequestStatus.INDEXING_API_FAILED,
                 VCRequestStatus.INSIGHT_REQUESTED,
@@ -64,9 +83,24 @@ export const VCSchema = new mongoose.Schema(
         outputFormat: {
             type: String,
             default: CaptionOutputFormat.TXT,
-            enum: [CaptionOutputFormat.SRT, CaptionOutputFormat.TXT],
+            enum: [
+                CaptionOutputFormat.SRT,
+                CaptionOutputFormat.TXT,
+                CaptionOutputFormat.ZIP,
+            ],
         },
         expiryTime: { type: Date },
+        otherRequests: { type: String },
+        resultType: {
+            type: String,
+            enum: [
+                HandleAccessibilityRequests.AUTO,
+                HandleAccessibilityRequests.MANUAL,
+            ],
+        },
+        secsForRemediation: {
+            type: String
+        }
     },
     {
         toJSON: { virtuals: true, getters: true },
@@ -91,3 +125,4 @@ const VideoCaptioning = mongoose.model<VcModel & mongoose.Document>(
 );
 
 export default VideoCaptioning;
+

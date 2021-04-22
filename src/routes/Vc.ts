@@ -35,5 +35,5 @@ router.post("/model", VCController.addCustomLanguageModel);
 
 router.get("/model", VCController.getAllModelsOfUser);
 router.get("/vcCount", VCController.vcCount);
-
+router.get("/details", VCController.fetchVcDetails);
 export default router;

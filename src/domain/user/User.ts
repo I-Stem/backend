@@ -1,19 +1,22 @@
 import User, {
-    IUserModel,
-    ServiceRoleEnum,
+    IUserModel
+} from "../../models/User";
+    import {ServiceRoleEnum,
     UserRoleEnum,
     UserStatusEnum,
-} from "../../models/User";
+    FontThemes,
+    ColorThemes
+} from "./UserConstants";
 import { UserCreationContext } from "./ContextPaths";
 import { IUser, Tokens } from "../../interfaces/models/user";
 import loggerFactory from "../../middlewares/WinstonLogger";
 import LedgerModel from "../LedgerModel";
 import { plainToClass } from "class-transformer";
 import { doesListContainElement } from "../../utils/library";
-import UniversityModel from "../organization/OrganizationModel";
-import {UniversityRoles} from "../organization";
+import {OrganizationModel} from "../organization";
+import {UniversityRoles} from "../organization/OrganizationConstants";
 import {InvitedUserModel} from "../InvitedUserModel";
-import {InvitedUserEnum} from "../InvitedUserModel/InvitedUserConstants";
+import {InvitedUserEnum, InvitationType} from "../InvitedUserModel/InvitedUserConstants";
 import {
     InvalidInvitationTokenError,
     UserAlreadyRegisteredError,
@@ -48,13 +51,18 @@ export function getUserTypeFromString(userType: any): UserType {
     }
 }
 
+
 export interface CardPreferences {
     showOnboardStaffCard: boolean;
     showOnboardStudentsCard: boolean;
 }
+export interface Themes {
+    colorTheme: ColorThemes;
+    fontTheme: FontThemes;
+}
 export interface UserPreferences {
     cardPreferences?: CardPreferences;
-    darkMode?: boolean;
+    themes?: Themes;
 }
 
 export interface UserModelProps {
@@ -157,19 +165,21 @@ class UserModel {
     }
     public static async updateUniversityCardsForUser(
         userId: string,
-        cardPreferences: CardPreferences
+        cardPreferences: CardPreferences,
+        themes: Themes
     ) {
         const logger = loggerFactory(
             UserModel.servicename,
             "updateUniversityCardsForUser"
         );
-        
+
         logger.info("Updating card preferences for user");
         try {
             await User.findByIdAndUpdate(userId, {
                 $set: {
                     userPreferences: {
                         cardPreferences,
+                        themes,
                     },
                 },
             }).exec();
@@ -562,7 +572,8 @@ class UserModel {
     public static async registerUser(
         props: UserModelProps,
         invitationToken: string | undefined,
-        emailVerificationLink: string | undefined
+        emailVerificationLink: string | undefined,
+        invitationType: InvitationType
     ): Promise<UserModel | null> {
         const logger = loggerFactory(UserModel.servicename, "registerUser");
 
@@ -582,6 +593,11 @@ class UserModel {
             }
 
             if (invitationToken) {
+                if (invitationType === InvitationType.FIRST_USER) {
+                    await OrganizationModel.performUniversityAccountPreApprovalRequest(
+                        persistedUser
+                    );
+                }
                 await persistedUser?.updateDetailsForInvitedUser(
                     invitationToken
                 );
@@ -591,17 +607,7 @@ class UserModel {
                         emailVerificationLink || ""
                     );
                 }
-
                 persistedUser.associateUserWithOrganization();
-
-                if (
-                    persistedUser?.userType === UserType.BUSINESS ||
-                    persistedUser?.userType === UserType.UNIVERSITY
-                ) {
-                    await UniversityModel.performUniversityAccountPreApprovalRequest(
-                        persistedUser
-                    );
-                }
             }
 
             if (
@@ -625,7 +631,7 @@ class UserModel {
             "associateUserWithOrganization"
         );
         const domainName = this.email.split("@")[1];
-        const university = await UniversityModel.findUniversityByDomainName(
+        const university = await OrganizationModel.findUniversityByDomainName(
             domainName
         );
         logger.info(`University: ${JSON.stringify(university)}`);
@@ -712,7 +718,7 @@ class UserModel {
             UserModel.servicename,
             "postAccountVerificationProcess"
         );
-        await LedgerModel.createCreditTransaction(
+        LedgerModel.createCreditTransaction(
             this.userId,
             Locals.config().invitedUserCredits,
             "Successful verification"

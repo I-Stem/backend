@@ -5,7 +5,7 @@ import Locals from "../providers/Locals";
 import loggerFactory from "../middlewares/WinstonLogger";
 import File from "../models/File";
 import {AfcModel} from "../domain/AfcModel";
-import { AFCRequestStatus, DocType, AFCTriggerer} from "../domain/AfcModel/AFCConstants";
+import { AFCRequestStatus, AFCRequestOutputFormat, DocType, AFCTriggerer} from "../domain/AfcModel/AFCConstants";
 import LedgerModel from "../domain/LedgerModel";
 import MessageQueue from "./message";
 import { getFormattedJson } from "../utils/formatter";
@@ -15,10 +15,13 @@ import ExceptionMessageTemplates, {
     ExceptionTemplateNames,
 } from "../MessageTemplates/ExceptionTemplates";
 import MLModelQueue from "./MLModelQueue";
-import FileModel from "../domain/FileModel";
+import FileModel, {UserContext} from "../domain/FileModel";
 import UserModel from "../domain/user/User";
 import ServiceRequestTemplates from "../MessageTemplates/ServiceRequestTemplates";
 import * as https from "https";
+import { FileProcessAssociations } from "../domain/FileModel/FileConstants";
+import {AFCProcess} from "../domain/AFCProcess";
+import FileService from "../services/FileService";
 
 class AfcResponseQueue {
     public queue: Bull.Queue;
@@ -58,7 +61,7 @@ class AfcResponseQueue {
             });
         this.process();
     }
-    public dispatch(data: { fileId: string; afcRequestId: string }): void {
+    public dispatch(data: { afcProcess: AFCProcess; outputFormats: AFCRequestOutputFormat[]; requestingUsers:{userId:string; organizationCode:string}[] }): void {
         const logger = loggerFactory(AfcResponseQueue.servicename, "dispatch");
         const options = {
             attempts: 2,
@@ -70,96 +73,93 @@ class AfcResponseQueue {
     private process(): void {
         const logger = loggerFactory(AfcResponseQueue.servicename, "process");
         this.queue.process(async (_job: any, _done: any) => {
-            logger.info("Processing AFC Response queue: %o", _job.data);
-
+            const afcProcess = new AFCProcess(_job.data.afcProcess);
             try {
-                const file = await FileModel.getFileById(_job.data.fileId);
-                const afcRequest = await AfcModel.getAfcModelById(
-                    _job.data.afcRequestId
-                );
-
-                await afcRequest?.changeStatusTo(
-                    AFCRequestStatus.OCR_COMPLETED
-                );
-
-                if (afcRequest !== null && file !== null) {
+logger.info("starting format conversion requests");
+                const results = _job.data.outputFormats.map(async (outputFormat:AFCRequestOutputFormat) => {
+                    try {
+                        logger.info("requesting for format: " + outputFormat);
+                        const inputFile = await FileModel.getFileById(afcProcess.inputFileId);
+                        const fileKey = `${inputFile?.userContexts[0].organizationCode}/${inputFile?.fileId}/${afcProcess.ocrType}/${afcProcess.ocrVersion}/afcOutput.${outputFormat.toLowerCase()}`;
                     const formattingAPIResult = await this.requestFormatting(
-                        afcRequest,
-                        file
+                        afcProcess,
+                        outputFormat,
+                        process.env.AWS_BUCKET_NAME || "",
+                        fileKey
                     );
                     if (formattingAPIResult.code === 500) {
-                        const user = await UserModel.getUserById(
-                            afcRequest.userId
+                        afcProcess.notifyAFCProcessFailure(
+                            null,
+                            getFormattedJson( formattingAPIResult),
+                            `Formatting API failed for output format: ${outputFormat}`,
+                            getFormattedJson( formattingAPIResult),
+"to be implemented",
+AFCRequestStatus.FORMATTING_FAILED
                         );
-                        if (user) {
-                            emailService.sendEmailToUser(
-                                user,
-                                ExceptionMessageTemplates.getFailureMessageForUser(
-                                    { user, data: afcRequest }
-                                )
-                            );
+
+                        return false;
                         }
-                    }
+
                     logger.info(
                         "received response from formatting service: %o",
                         formattingAPIResult
                     );
 
-                    if (formattingAPIResult.code === 200) {
-                        afcRequest.changeStatusTo(
+                    if ( formattingAPIResult?.code === 200) {
+                        const userContexts:UserContext[] = [];
+                        _job.data.requestingUsers.forEach(element => {
+                            userContexts.push(new UserContext(element.userId, FileProcessAssociations.AFC_OUTPUT, element.organizationCode));
+                        });
+
+                        let outputFile = await FileModel.findFileByHash(formattingAPIResult.hash);
+                        if(outputFile === null) {
+                        outputFile = new FileModel({
+                            userContexts: userContexts,
+hash: formattingAPIResult.hash,
+container: process.env.AWS_BUCKET_NAME || "",
+fileKey : fileKey,
+name: FileModel.getFileNameByProcessAssociationType("output" + outputFormat.toLowerCase(), FileProcessAssociations.AFC_OUTPUT) || ""
+                        });
+                        await outputFile.persist();
+                        outputFile.setFileLocation(fileKey);
+                    }
+                        afcProcess.changeStatusTo(
                             AFCRequestStatus.FORMATTING_COMPLETED
                         );
-                        afcRequest.updateFormattingResults(
-                            formattingAPIResult.url,
-                            file.pages || 0
+                        await afcProcess.updateFormattingResult(
+                            outputFormat,
+                            outputFile
                         );
-
-                        if (afcRequest.triggeredBy === AFCTriggerer.USER) {
-                            logger.info(
-                                "sending email to user for user triggered afc request"
-                            );
-                            const user = await UserModel.getUserById(
-                                afcRequest.userId
-                            );
-                            if (user !== null) {
-                                AfcModel.afcRequestTransactionAndNotifyUser(
-                                    afcRequest,
-                                    file.pages || 0,
-                                    "Document accessibility conversion of file:" +
-                                        afcRequest.documentName,
-                                    user
-                                );
-                            } else {
-                                logger.error(
-                                    "couldn't get user by id: " +
-                                        afcRequest.userId
-                                );
-                            }
-                        } else {
-                            logger.info(
-                                "Triggereing video captioning model training flow"
-                            );
-
-                            await LedgerModel.createDebitTransaction(
-                                afcRequest.userId,
-                                file.pages || 0,
-                                "custom language model training"
-                            );
-
-                            MLModelQueue.dispatch(afcRequest);
-                        }
+                } else if ( formattingAPIResult?.code === 500) {
+                    logger.error("formatting api failing for " + outputFormat );
+                    afcProcess.notifyAFCProcessFailure(
+                        inputFile,
+                        `formatting API returned 500 in response`,
+                        `Formatting API failed for output format: ${outputFormat} with 500 in response`,
+    "",
+    "to be implemented",
+    AFCRequestStatus.FORMATTING_FAILED
+                    );
                     }
-                } else {
-                    afcRequest?.changeStatusTo(
-                        AFCRequestStatus.FORMATTING_FAILED
-                    );
-                    logger.error(
-                        "couldn't retrieve afc request or file: " +
-                            afcRequest?.afcRequestId +
-                            " file: " +
-                            file?.fileId
-                    );
-                }
+                return true;
+            } catch(error) {
+                logger.error("formatting api failing for " + outputFormat + " %o", error);
+                afcProcess.notifyAFCProcessFailure(
+                    null,
+                    `couldn't connect to formatting api`,
+                    `Formatting API failed for output format: ${outputFormat}`,
+"",
+"to be implemented",
+AFCRequestStatus.FORMATTING_FAILED
+                );
+            }
+
+            return false;
+            });
+
+await Promise.all(results);
+logger.info("finished all format conversion requests");
+afcProcess.finishPendingUserRequests();
             } catch (error) {
                 logger.error(
                     "encountered error in afc response flow: %o",
@@ -172,8 +172,10 @@ class AfcResponseQueue {
     }
 
     public async requestFormatting(
-        afcRequest: AfcModel,
-        file: FileModel,
+        afcProcess: AFCProcess,
+outputFormat: AFCRequestOutputFormat,
+container:string,
+fileKey: string,
         serviceType?: string
     ): Promise<any> {
         const logger = loggerFactory(
@@ -182,45 +184,36 @@ class AfcResponseQueue {
         );
         logger.info("calling formatting API");
         try {
-            let filePath = "";
-            if (afcRequest.docType === DocType.NONMATH) {
-                filePath = String(file?.ocrFileURL || "");
-            } else {
-                filePath = String(file?.mathOcrFileUrl || "");
-            }
-            const response = await got.get(filePath);
+            let response;
+            if(afcProcess.ocrJSONFile)
+            response = await FileService.getFileDataByS3Key(afcProcess.ocrJSONFile.container, afcProcess.ocrJSONFile.fileKey);
             const formattingAPIResult = await got.post(
                 `${process.env.SERVICE_API_HOST}/api/v1/ocr/format`,
                 {
                     json: {
-                        json: JSON.parse(response.body),
-                        format: afcRequest?.outputFormat,
-                        hash: file.hash,
-                        documentName: afcRequest?.documentName,
+                        json: JSON.parse(response.Body.toString("utf-8")),
+                        format: outputFormat,
+                        container: container,
+                        file_key: fileKey
                     },
                     responseType: "json",
                 }
             );
             return formattingAPIResult.body;
         } catch (error) {
+            logger.error("error: %o", error);
             if (serviceType === "escalation") {
-                this.handleFormattingAPIError(
-                    afcRequest,
-                    error,
-                    file,
-                    "escalation"
-                );
+                this.handleFormattingAPIError(afcProcess, error,  "escalation");
                 throw new Error("Failure in docx conversion");
             }
-            this.handleFormattingAPIError(afcRequest, error, file, "");
+            this.handleFormattingAPIError(afcProcess, error,  "");
             return;
         }
     }
 
     private async handleFormattingAPIError(
-        afcRequest: AfcModel,
+        afcProcess: AFCProcess,
         formattingAPIResult: any,
-        file: FileModel,
         serviceType: string
     ) {
         const logger = loggerFactory(
@@ -232,32 +225,15 @@ class AfcResponseQueue {
             formattingAPIResult.statusCode,
             formattingAPIResult.body
         );
-        afcRequest.changeStatusTo(AFCRequestStatus.FORMATTING_FAILED);
-        emailService.sendInternalDiagnosticEmail(
-            ExceptionMessageTemplates.getFormattingAPIFailingExceptionMessage({
-                code: formattingAPIResult.statusCode,
-                reason: "formatting api failing",
-                stackTrace: formattingAPIResult,
-                correlationId: "to be implemented",
-                userId: afcRequest.userId,
-                afcRequestId: afcRequest.afcRequestId,
-                OCRVersion: file.OCRVersion,
-                inputFileId: afcRequest.inputFileId,
-                inputURL: file.inputURL,
-            })
-        );
-        if (serviceType !== "escalation") {
-            const user = await UserModel.getUserById(afcRequest.userId);
-            if (user) {
-                emailService.sendEmailToUser(
-                    user,
-                    ExceptionMessageTemplates.getFailureMessageForUser({
-                        user,
-                        data: afcRequest,
-                    })
-                );
-            }
-        }
+
+        afcProcess.notifyAFCProcessFailure(
+            null,
+            getFormattedJson (formattingAPIResult),
+            getFormattedJson(formattingAPIResult),
+            formattingAPIResult.code,
+            "to be implemented",
+            AFCRequestStatus.FORMATTING_FAILED
+            );
     }
 }
 

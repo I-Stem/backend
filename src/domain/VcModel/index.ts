@@ -6,11 +6,13 @@ import ReviewModel from "../ReviewModel";
 import UserModel from "../user/User";
 import EmailService from "../../services/EmailService";
 import ServiceRequestTemplates from "../../MessageTemplates/ServiceRequestTemplates";
-import { getVideoDurationInSeconds } from "get-video-duration";
 import { getFormattedJson } from "../../utils/formatter";
 import ExceptionMessageTemplates from "../../MessageTemplates/ExceptionTemplates";
-import FileModel from "../FileModel";
+import FileModel, {FileCoordinate} from "../FileModel";
 import {VCRequestStatus, VideoExtractionType, CaptionOutputFormat} from "./VCConstants";
+import {HandleAccessibilityRequests} from "../organization/OrganizationConstants";
+import {calculateNumbersInRange} from "../../utils/library";
+import {VCProcess} from "../VCProcess";
 
 export class VCRequestLifecycleEvent {
     status: VCRequestStatus;
@@ -25,27 +27,37 @@ export class VCRequestLifecycleEvent {
 export interface VCProps {
     vcRequestId?: string;
     _id?: string;
+    associatedProcessId?: string;
     userId: string;
+    organizationCode: string;
     documentName: string;
     requestType: VideoExtractionType;
     inputFileId: string;
     modelId?: string;
     tag?: string;
     outputURL?: string;
+    outputFile?: FileCoordinate;
+    inputFileLink: string;
     videoLength?: number;
     review?: ReviewModel;
     reviews?: ReviewModel[];
     status: VCRequestStatus;
     statusLog?: VCRequestLifecycleEvent[];
     outputFormat?: CaptionOutputFormat;
+    escalationId?: string;
     expiryTime?: Date;
+    otherRequests?: string;
+    resultType?: HandleAccessibilityRequests;
+    secsForRemediation?: string;
 }
 
 export class VcModel {
     static serviceName = "VcModel";
 
     vcRequestId: string;
+    associatedProcessId?: string;
     userId: string;
+    organizationCode: string;
     documentName: string;
     requestType: VideoExtractionType;
     inputFileId: string;
@@ -53,16 +65,24 @@ export class VcModel {
     modelId?: string;
     tag?: string;
     outputURL?: string;
+    outputFile?: FileCoordinate;
+    inputFileLink: string;
     review?: ReviewModel;
     reviews: ReviewModel[];
     status: VCRequestStatus;
     statusLog?: VCRequestLifecycleEvent[];
     outputFormat?: CaptionOutputFormat;
+    escalationId?: string;
     expiryTime?: Date;
+    otherRequests?: string;
+    resultType?: HandleAccessibilityRequests;
+    secsForRemediation?: string;
 
     constructor(props: VCProps) {
         this.vcRequestId = props.vcRequestId || props._id || "";
+        this.associatedProcessId = props.associatedProcessId;
         this.userId = props.userId;
+        this.organizationCode = props.organizationCode;
         this.documentName = props.documentName;
         this.requestType = props.requestType;
         this.inputFileId = props.inputFileId;
@@ -70,6 +90,8 @@ export class VcModel {
         this.tag = props.tag || undefined;
         this.videoLength = props.videoLength || 0;
         this.outputURL = props.outputURL || "";
+        this.outputFile = props.outputFile;
+        this.inputFileLink = props.inputFileLink;
         this.review = props.review;
         this.reviews = props.reviews || [];
         this.status = props.status;
@@ -77,21 +99,23 @@ export class VcModel {
             new VCRequestLifecycleEvent(props.status),
         ];
         this.outputFormat = props.outputFormat || CaptionOutputFormat.TXT;
+        this.escalationId = props.escalationId;
         this.expiryTime = props.expiryTime;
+        this.otherRequests = props.otherRequests;
+        this.resultType = props.resultType;
+        this.secsForRemediation = props.secsForRemediation;
     }
 
-    async persist(): Promise<boolean | VcModel> {
+    async persist() {
         const logger = loggerFactory(VcModel.serviceName, "persist");
         logger.info("persisting vc request data: %o", this);
         try {
-            const vcSaved = await (
-                await new VcDbModel(this).save()
-            ).execPopulate();
+            const vcSaved = await new VcDbModel(this).save();
             this.vcRequestId = vcSaved._id;
             return this;
         } catch (error) {
             logger.error("error occurred while persisting: %o", error);
-            return false;
+            return null;
         }
     }
 
@@ -130,25 +154,40 @@ export class VcModel {
         return totalTime / request.length;
     }
 
-    public async updateOutputURLAndVideoLength(
-        outputURL: string,
-        videoLength: number
-    ) {
-        this.outputURL = outputURL;
-        this.videoLength = videoLength;
-
+    public async updateOutputResult(outputFileCoordinate: FileCoordinate) {
+        let outputFormat: CaptionOutputFormat | undefined = undefined;
+        if(this.resultType === HandleAccessibilityRequests.MANUAL) {
+        const file = await FileModel.getFileById(outputFileCoordinate.fileId || "");
+        outputFormat = file?.name.substr(file?.name.lastIndexOf(".")+1).toUpperCase() as CaptionOutputFormat;
+        }
+        this.outputURL = `/file/vc/${this.vcRequestId}`;
+        this.outputFile = outputFileCoordinate;
         await VcDbModel.findByIdAndUpdate(this.vcRequestId, {
-            outputURL: outputURL,
-            videoLength: videoLength,
+            outputURL: this.outputURL,
+            outputFile: outputFileCoordinate,
+            outputFormat: outputFormat
         }).lean();
     }
 
     public async chargeUserForRequest() {
+
+        let charge_for_request = 0;
+
+        let message = "";
+        if(this.resultType === HandleAccessibilityRequests.AUTO) {
+charge_for_request = Math.ceil (this.videoLength/10);
+message = "Audio/Video accessibility of file: " + this.documentName;
+        } else {
+            charge_for_request = Math.ceil((calculateNumbersInRange(this.secsForRemediation || "")/60)*25);
+            message = "Manual remediation of file: " + this.documentName
+        }
         await LedgerModel.createDebitTransaction(
             this.userId,
-            this.videoLength / 10,
-            "Audio/Video accessibility of file: " + this.documentName
+            charge_for_request,
+            message
         );
+
+        return false;
     }
 
     public async notifyUserForResults() {
@@ -158,18 +197,36 @@ export class VcModel {
         );
         const user = await UserModel.getUserById(this.userId);
         if (user !== null) {
-            await EmailService.sendEmailToUser(
-                user,
-                ServiceRequestTemplates.getServiceRequestComplete({
-                    userName: user.fullname,
-                    userId: user.userId,
-                    outputURL: this.outputURL || "",
-                    documentName: this.documentName,
-                })
-            );
+                    if(this.resultType === HandleAccessibilityRequests.AUTO) {
+                await EmailService.sendEmailToUser(
+                    user,
+                    ServiceRequestTemplates.getServiceRequestComplete({
+                        userName: user.fullname,
+                        userId: user.userId,
+                        outputURL: this.outputURL || "",
+                        documentName: this.documentName,
+                    })
+                );
+            }
         } else {
             logger.error("couldn't get user by id: " + this.userId);
         }
+    }
+
+    public async performSuccessfulRequestCompletionPostActions(
+        finalSuccessStatus: VCRequestStatus,
+        outputFileCoordinate: FileCoordinate
+    ) {
+        const updateStatus = this.changeStatusTo(finalSuccessStatus);
+        const updateResult = this.updateOutputResult(outputFileCoordinate);
+        const deductCredits = this.chargeUserForRequest();
+        const notifyUser = this.notifyUserForResults();
+        return await Promise.all([
+            updateStatus,
+            updateResult,
+            deductCredits,
+            notifyUser,
+        ]);
     }
 
     public static async saveReview(
@@ -302,6 +359,7 @@ export class VcModel {
         await VcDbModel.findByIdAndUpdate(requestId, { expiryTime });
     }
 
+    /*
     public static async updateVideoLength(
         url: string,
         requestId: string
@@ -316,6 +374,8 @@ export class VcModel {
         ).getTime();
         await VcModel.setExpiryTime(videoLength, requestId, creationTime);
     }
+    */
+
     public static vcCronHandler(
         expiryTimeGTE: string,
         expiryTimeLTE: string
@@ -345,7 +405,7 @@ export class VcModel {
                         );
                         if (pendingStatus) {
                             logger.info("Failing requests found");
-                            FileModel.vcInputFileHandler(vcReq);
+                            //FileModel.vcInputFileHandler(vcReq);
                             failedRequests.push(getFormattedJson(vcReq));
                         }
                     });
@@ -368,9 +428,9 @@ export class VcModel {
 
     public static async updateEscalatedVcRequestWithRemediatedFile(
         vcId: string,
-        url: string
+        remediatedFile: FileCoordinate
     ) {
-        await VcDbModel.findByIdAndUpdate(vcId, { outputURL: url });
+        await VcDbModel.findByIdAndUpdate(vcId, { outputFile: remediatedFile });
     }
 
     public static async updateVcStatusById(
@@ -384,6 +444,28 @@ export class VcModel {
             },
         }).exec();
     }
-}
 
+    public async initiateVCProcessForRequest(
+        vcProcess: VCProcess,
+        inputFile: FileModel
+    ) {
+        if (vcProcess?.isVideoInsightExtractionComplete()) {
+            if (this.outputFormat) {
+                const outputFile = vcProcess.getVideoInsightResult(
+                    this.requestType,
+                    this.outputFormat
+                );
+                this.performSuccessfulRequestCompletionPostActions(
+                    VCRequestStatus.COMPLETED,
+                    outputFile
+                );
+            }
+        } else if (vcProcess.isVideoInsightExtractionInProgress()) {
+            vcProcess.addVCRequest(this.vcRequestId);
+        } else {
+            vcProcess.startVCProcess(inputFile);
+            vcProcess.addVCRequest(this.vcRequestId);
+        }
+    }
+}
 

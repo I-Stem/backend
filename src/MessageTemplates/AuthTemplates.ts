@@ -20,6 +20,7 @@ export interface UserDetails {
     email?: string;
     organizationName?: string;
     userType?: string;
+    verificationLink?: string;
 }
 
 export interface VerificationMessageProps extends UserDetails {
@@ -38,7 +39,9 @@ export interface InvitedUserRegisterProps {
 }
 
 export interface OrganizationRegistrationRequestProps {
-    firstUser: UserModel;
+    userName: string;
+    email: string;
+    organizationName: string;
 }
 
 class AuthMessageTemplates {
@@ -131,14 +134,16 @@ class AuthMessageTemplates {
             body: `
             <p>Hello I-Stem</p>
             <p>You have new organization request by user:</p>
-            <pre>${getFormattedJson(props.firstUser)}</pre>
-            <p>Visit I-Stem Admin Panel to approve or reject the reject.</p>
+            <p>User email: ${props.email}</p>
+            <p>User name: ${props.userName}</p>
+            <p>Organization Name: ${props.organizationName}</p>
+            <p>Visit I-Stem Admin Panel to approve or reject the request.</p>
             `,
         });
     }
 
     public static getNewOrganizationRequestApprovalMessage(props: UserDetails) {
-        let businessMessage;
+        let businessMessage = "";
         let employeeOrStudent;
         if (props.userType === UserType.BUSINESS) {
             employeeOrStudent = "employees";
@@ -156,7 +161,7 @@ class AuthMessageTemplates {
             <p>Hello ${props.name}</p>
             <p>Welcome aboard!!</p>
             <p>Your request to create organization account for your organization ${props.organizationName} has been approved by I-Stem.</p>
-<p>Now you could log into I-Stem portal and could try out the following things:</p>
+<p>Now you could click <a href="${props.verificationLink}">here</a> to create your account into I-Stem portal and could try out the following things:</p>
 <ul>
 <li>Create a profile of your organization.</li>
 <li>Can invite your colleagues as "staff" to manage administrative tasks.</li>

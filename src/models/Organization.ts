@@ -1,11 +1,12 @@
 import mongoose from "mongoose";
-import {University} from "../domain/organization/OrganizationModel";
+import {University} from "../domain/organization";
 import {
     DomainAccess,
     EscalationsHandledBy,
     UniversityAccountStatus,
     DomainAccessStatus,
-} from "../domain/organization";
+    HandleAccessibilityRequests
+} from "../domain/organization/OrganizationConstants";
 
 const allowedAccountStatuses = [
     UniversityAccountStatus.CREATED,
@@ -38,6 +39,14 @@ const UniversitySchema = new mongoose.Schema(
                 EscalationsHandledBy.NONE,
             ],
         },
+        handleAccessibilityRequests: {
+            type: String,
+            enum: [
+                HandleAccessibilityRequests.AUTO,
+                HandleAccessibilityRequests.MANUAL,
+                HandleAccessibilityRequests.ASK_USER,
+            ],
+        },
         domainAccess: {
             type: String,
             enum: [DomainAccess.AUTO, DomainAccess.MANUAL, DomainAccess.NONE],
@@ -67,6 +76,7 @@ const UniversitySchema = new mongoose.Schema(
         domainAccessRequestedBy: {
             type: mongoose.Schema.Types.ObjectId,
         },
+        showRemediationSetting: { type: Boolean },
     },
     {
         toJSON: { virtuals: true, getters: true },

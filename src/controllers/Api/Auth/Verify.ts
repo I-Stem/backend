@@ -3,7 +3,8 @@
  *
  */
 
-import User, { ServiceRoleEnum, UserRoleEnum } from '../../../models/User';
+import User from "../../../models/User";
+import { ServiceRoleEnum, UserRoleEnum } from '../../../domain/user/UserConstants';
 import { response } from '../../../utils/response';
 import * as HttpStatus from 'http-status-codes';
 import { Request, Response } from 'express';
