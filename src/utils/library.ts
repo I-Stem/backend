@@ -1,6 +1,6 @@
 import loggerFactory from '../middlewares/WinstonLogger';
 
-export function calculateAfcEsclateCredits(pageString: string) {
+export function calculateNumbersInRange(pageString: string) {
     const logger = loggerFactory('library', 'calculateAfcEscalationCredits');
     try {
     let pages = pageString.split(',');

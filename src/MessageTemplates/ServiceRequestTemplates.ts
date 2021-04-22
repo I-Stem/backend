@@ -56,7 +56,7 @@ class ServiceRequestTemplates {
             label: MessageLabel.REQUEST_STATUS_UPDATE,
             subject: `[I-Stem] Service request for ${props.documentName} is complete!!`,
             body: `<p>Hello ${props.userName}</p>
-            <p>Your service request for file ${props.documentName} is complete. Please click <a href="${props.outputURL}">here</a> to download the output file.</p>
+            <p>Your service request for file ${props.documentName} is complete. Please click <a href="${process.env.PORTAL_URL}${props.outputURL}">here</a> to download the output file.</p>
 
             <p>I-Stem</p>
             `,

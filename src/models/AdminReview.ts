@@ -10,7 +10,8 @@ import {AdminReviewModel} from "../domain/AdminReviewModel";
     ReviewRequestType,
 } from "../domain/AdminReviewModel/AdminReviewConstants";
 import mongoose from "mongoose";
-import { ServiceRoleEnum } from "./User";
+import { ServiceRoleEnum } from "../domain/user/UserConstants";
+import {OrganizationRequestedType} from "../domain/organization/OrganizationConstants";
 
 export const AdminReviewSchema = new mongoose.Schema(
     {
@@ -25,9 +26,17 @@ export const AdminReviewSchema = new mongoose.Schema(
             email: { type: String },
         },
         organizationRequest: {
-            organizationCode: { type: String },
             organizationName: { type: String },
-            userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+            userName: { type: String },
+            organizationType: {
+                type: String,
+                enum: [
+                    OrganizationRequestedType.BUSINESS,
+                    OrganizationRequestedType.UNIVERSITY,
+                ],
+            },
+            userEmail: { type: String },
+            organizationCode: { type: String },
         },
         domainAccessRequest: {
             organizationCode: { type: String },

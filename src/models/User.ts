@@ -10,50 +10,14 @@ import Ledger from "./Ledger";
 import * as mongoose from "mongoose";
 import * as crypto from "crypto";
 import loggerFactory from "../middlewares/WinstonLogger";
-import { OAuthProvider, OtherUserRoles, UserType } from "../domain/user/UserConstants";
-import { UniversityRoles } from "../domain/organization";
+import { OAuthProvider, OtherUserRoles, UserType, UserRoleEnum, ServiceRoleEnum, ColorThemes, FontThemes, UserStatusEnum } from "../domain/user/UserConstants";
+import { UniversityRoles } from "../domain/organization/OrganizationConstants";
 
 const mongooseFuzzySearching = require("mongoose-fuzzy-searching");
 const servicename = "User";
 // Create the model schema & register your custom methods here
-export interface IUserModel extends mongoose.Document {
-    fullname: string;
-    gender?: string;
-    email: string;
-    password: string;
-    isVerified: boolean;
-    userType: UserType;
-    verifyUserToken: string;
-    verifyUserExpires: Date;
-
-tokens:any[];
-    steam?: string;
-
-    passwordResetToken?: string;
-    passwordResetExpires: Date;
-
-    geolocation?: string;
-    website?: string;
-    picture?: string;
-
-    organizationName?: string;
-    organisationAddress?: string;
-    role: UserRoleEnum | UniversityRoles | OtherUserRoles;
-    accessRequestSent?: boolean;
-
-    organizationCode: string;
-    deductCredits(amount: number, reason: string): void;
-    rollNumber?: string;
-    serviceRole: ServiceRoleEnum;
-    oauthProvider: OAuthProvider;
-    oauthProviderId: string;
-    //    generateResetExpiryDate(): Date;
-    // generateResetToken(_passwordResetExpires: Date): string;
-
-
-
-
-
+export interface IUserModel extends IUser, mongoose.Document {
+    billingAddress(): string;
     comparePassword(password: string, cb: any): string;
     validPassword(password: string, cb: any): string;
     gravatar(_size: number): string;
@@ -69,24 +33,6 @@ tokens:any[];
     currentStatus: string;
 }
 
-export enum UserRoleEnum {
-    USER = "USER",
-    ADMIN = "ADMIN",
-}
-
-export enum UserStatusEnum {
-    USER_CREATED = "USER_CREATED",
-    VERIFY_USER_MAIL_SENT = "VERIFY_USER_MAIL_SENT",
-    USER_VERIFIED = "USER_VERIFIED",
-    ROLE_UPGRADE_REQUEST_RECIEVED = "ROLE_UPGRADE_REQUEST_RECIEVED",
-    ROLE_UPGRADE_REQUEST_MAIL_SENT = "ROLE_UPGRADE_REQUEST_MAIL_SENT",
-    ROLE_UPGRADE_REQUEST_COMPLETE = "ROLE_UPGRADE_REQUEST_COMPLETE",
-}
-
-export const enum ServiceRoleEnum {
-    REGULAR = "REGULAR",
-    PREMIUM = "PREMIUM",
-}
 
 // Define the User Schema
 export const UserSchema = new mongoose.Schema(
@@ -132,7 +78,10 @@ export const UserSchema = new mongoose.Schema(
                 showOnboardStaffCard: { type: Boolean, default: true },
                 showOnboardStudentsCard: { type: Boolean, default: true },
             },
-            darkMode: { type: Boolean, default: false },
+            themes: {
+                colorTheme: { type: ColorThemes },
+                fontTheme: { type: FontThemes },
+            },
         },
         oauthProvider: {
             type: String,
@@ -208,6 +157,17 @@ UserSchema.pre<IUserModel>("save", async function (_next) {
     return _next();
 });
 
+// Custom Methods
+// Get user's full billing address
+UserSchema.methods.billingAddress = function (): string {
+    const methodname = "billingAddress";
+    const logger = loggerFactory(servicename, methodname);
+
+    const fulladdress = `${this.fullname.trim()} ${this.geolocation.trim()}`;
+    logger.info(`Billing address: ${fulladdress}`);
+
+    return fulladdress;
+};
 
 // create the user's password with the request password
 UserSchema.methods.generatePassword = function (
@@ -217,7 +177,7 @@ UserSchema.methods.generatePassword = function (
     const hash = bcrypt.hashSync(_requestPassword, saltRounds);
     return hash;
 };
-/*
+
 // Compares the user's password with the request password
 UserSchema.methods.comparePassword = function (
     _requestPassword: string,
@@ -385,7 +345,7 @@ UserSchema.methods.checkCredits = async function (
         },
     ]).exec();
 };
-*/
+
 UserSchema.virtual("currentStatus").get(function (this: { statusLog: [] }) {
     return this.statusLog[this.statusLog.length - 1];
 });

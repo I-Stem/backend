@@ -15,8 +15,7 @@ import {InvitedUserModel} from "../../../domain/InvitedUserModel";
 import {InvitedUserEnum} from "../../../domain/InvitedUserModel/InvitedUserConstants";
 import LedgerModel from "../../../domain/LedgerModel";
 import Locals from "../../../providers/Locals";
-import UniversityModel from "../../../domain/organization/OrganizationModel";
-import {UniversityRoles} from "../../../domain/organization";
+import {UniversityRoles} from "../../../domain/organization/OrganizationConstants";
 
 import { UserDomainErrors } from "../../../domain/user/UserDomainErrors";
 import passport from "passport";
@@ -53,7 +52,8 @@ class RegisterController {
                     context: req.body.context,
                 },
                 req.body.verifyToken,
-                req.body.verificationLink
+                req.body.verificationLink,
+                req.body.invitationType
             );
         } catch (error) {
             logger.error("Bad Request: %o", error);
@@ -209,7 +209,7 @@ export default RegisterController;
 
             const persistedUser = await user.persist();
             const domainName = _email.split("@")[1];
-            const university = await UniversityModel.findUniversityByDomainName(
+            const university = await OrganizationModel.findUniversityByDomainName(
                 domainName
             );
             logger.info(`University: ${JSON.stringify(university)}`);

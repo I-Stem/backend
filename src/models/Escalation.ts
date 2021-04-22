@@ -8,9 +8,9 @@ import {
 /**
  * Escalation Model Schema
  */
-const escalationSchema = new mongoose.Schema(
+ const escalationSchema = new mongoose.Schema(
     {
-        escalatorId: { type: mongoose.Types.ObjectId, ref: "User" },
+        waitingRequests: [{ type: mongoose.Types.ObjectId}],
         resolverId: { type: mongoose.Types.ObjectId, ref: "User" },
         serviceRequestId: {
             type: mongoose.Types.ObjectId,
@@ -25,9 +25,21 @@ const escalationSchema = new mongoose.Schema(
             ref: "File",
             required: true,
         },
-        aiServiceConvertedFileURL: { type: String },
+        sourceFileHash: {
+            type: String,
+            index: true
+        },
+        aiServiceConvertedFile: { 
+            container: {type: String },
+        fileKey: {type: String},
+        fileId: {Type: mongoose.Schema.Types.ObjectId}
+        },
         escalationForResult: { type: String },
-        remediatedFileURL: { type: String },
+        remediatedFile: { 
+            container: {type: String },
+        fileKey: {type: String},
+        fileId: {Type: mongoose.Schema.Types.ObjectId}
+        },
         pageRanges: [String],
         videoPortions: [String],
         escalatorOrganization: { type: String },

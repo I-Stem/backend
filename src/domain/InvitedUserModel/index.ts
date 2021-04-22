@@ -3,11 +3,17 @@ import loggerFactory from "../../middlewares/WinstonLogger";
 import InvitedUserDbModel from "../../models/InvitedUser";
 import AuthMessageTemplates from "../../MessageTemplates/AuthTemplates";
 import Locals from "../../providers/Locals";
-import UniversityModel from "../organization/OrganizationModel";
+import {OrganizationModel} from "../organization";
 import { UserType } from "../user/UserConstants";
-import {UniversityRoles} from "../organization";
+import {UniversityRoles} from "../organization/OrganizationConstants";
+import {InvitedUserEnum, InvitationType} from "./InvitedUserConstants";
 
-import {InvitedUserEnum} from "./InvitedUserConstants"
+export interface StudentDetail {
+    NAME: string | null;
+    EMAIL: string | null;
+    ROLL_NUMBER: string | null;
+}
+
 export interface StudentDetail {
     NAME: string | null;
     EMAIL: string | null;
@@ -32,16 +38,16 @@ export interface InvitedUser {
 export class InvitedUserModel {
     static servicename = "InvitedUserModel";
     email: string;
-    fullName?: string;
+    fullName: string;
     university: string;
-    verifyToken?: string;
-    isRegistered?: boolean;
-    userId?: string;
-    rollNumber?: string;
+    verifyToken: string;
+    isRegistered: boolean;
+    userId: string;
+    rollNumber: string;
     role: UniversityRoles;
     userType: UserType;
-    statusLog?: { status: InvitedUserEnum; actionAt: Date }[];
-    status?: InvitedUserEnum;
+status?: InvitedUserEnum;
+statusLog: { status: InvitedUserEnum; actionAt: Date }[];
 
     constructor(props: InvitedUser) {
         this.email = props.email;
@@ -53,9 +59,15 @@ export class InvitedUserModel {
         this.rollNumber = props.rollNumber || "";
         this.role = props.role;
         this.userType = props.userType;
+        this.status = props.status;
+        this.statusLog = props.statusLog || [];
     }
 
-    static async persistInvitedUser(userData: InvitedUserModel[]) {
+    static async persistInvitedUser(
+        userData: InvitedUser[],
+        invitationType: InvitationType,
+        organizationName?: string
+    ) {
         const logger = loggerFactory(
             InvitedUserModel.servicename,
             "persistInvitedUser"
@@ -70,11 +82,27 @@ export class InvitedUserModel {
                             user.email
                         )}&verificationToken=${user.verifyToken}&userType=${
                             user.userType
+                        }&invitationType=${invitationType}&userName=${
+                            user.fullName
                         }`;
-                        InvitedUserModel.sendEmailToUser(
-                            verificationLink,
-                            user
-                        );
+                        if (invitationType === InvitationType.ORGANIZATION) {
+                            InvitedUserModel.sendEmailToUser(
+                                verificationLink,
+                                user
+                            );
+                        } else {
+                            emailService.sendEmailToOrganization(
+                                user.email,
+                                AuthMessageTemplates.getNewOrganizationRequestApprovalMessage(
+                                    {
+                                        name: user.fullName || "",
+                                        organizationName: organizationName,
+                                        userType: user.userType,
+                                        verificationLink: verificationLink,
+                                    }
+                                )
+                            );
+                        }
                         user.statusLog?.push({
                             status: InvitedUserEnum.INVITATION_SENT,
                             actionAt: new Date(),
@@ -159,7 +187,7 @@ export class InvitedUserModel {
             "sendEmailToUser"
         );
         try {
-            const university = await UniversityModel.getUniversityByCode(
+            const university = await OrganizationModel.getUniversityByCode(
                 user.university
             );
             emailService.sendEmailToInvitedUser(
@@ -176,5 +204,4 @@ export class InvitedUserModel {
         }
     }
 }
-
 

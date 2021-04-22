@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { UniversityRoles } from "../domain/organization";
+import { UniversityRoles } from "../domain/organization/OrganizationConstants";
 import { UserType } from "../domain/user/UserConstants";
 import { InvitedUserEnum } from "../domain/InvitedUserModel/InvitedUserConstants";
 import {InvitedUserModel} from "../domain/InvitedUserModel";

@@ -17,6 +17,8 @@ import ExceptionMessageTemplates, { ExceptionTemplateNames } from '../MessageTem
 import { getFormattedJson } from '../utils/formatter';
 import VcResponseQueue from './VcResponse';
 import { DocType } from '../domain/AfcModel/AFCConstants';
+import {VCProcess} from "../domain/VCProcess";
+import FileService from "../services/FileService";
 
 class VcRequestQueue {
     static servicename = 'VCRequestQueue';
@@ -51,7 +53,7 @@ class VcRequestQueue {
             });
         this.process();
     }
-    public dispatch(_data: VcModel): void {
+    public dispatch(_data: {vcProcessData: VCProcess, inputFile: FileModel}): void {
         const options = {
             attempts: 2
         };
@@ -61,76 +63,48 @@ class VcRequestQueue {
         const logger = loggerFactory(VcRequestQueue.servicename, 'process');
         this.queue.process(async (_job: any, _done: any) => {
             logger.info('started processing: %o', _job.data);
-            const vcRequest = new VcModel(_job.data);
-
+            const vcProcess = new VCProcess(_job.data.vcProcessData);
+const inputFile = new FileModel(_job.data.inputFile);
             try {
-            const file = await FileModel.getFileById(vcRequest.inputFileId);
-
-            if (file !== null) {
-                await VcModel.updateVideoLength(file.inputURL, vcRequest.vcRequestId);
-                if (file.externalVideoId && file.ocrWaitingQueue.length === 0) {
-                    await vcRequest.changeStatusTo(VCRequestStatus.INDEXING_SKIPPED);
-                    VcResponseQueue.dispatch({
-    vcRequestId: vcRequest.vcRequestId,
-    videoId: file.externalVideoId
-});
-                } else if (this.isVideoIndexingRequired(file)) {
-const result: any = await this.requestVideoInsights(vcRequest, file);
+const result: any = await this.requestVideoInsights(vcProcess, inputFile);
 
 if (result === null) {
-vcRequest.changeStatusTo(VCRequestStatus.INDEXING_REQUEST_FAILED);
+vcProcess.changeStatusTo(VCRequestStatus.INDEXING_REQUEST_FAILED);
 } else {
-    file.addRequestToWaitingQueue(vcRequest.vcRequestId, DocType.NONMATH);
-    await file.updateVideoId(result.videoId);
+    await vcProcess.updateVideoId(result.videoId);
 }
-
-                } else {
-                    await file.addRequestToWaitingQueue(vcRequest.vcRequestId, DocType.NONMATH);
-                }
-            } else {
-                this.sendAPIFailureAlert(vcRequest, file, 200, 'couldn\'t get input file', 'none');
-            }
-
             } catch (error) {
-                logger.error('encountered error in vc request flow: %o', error);
+                logger.error('encountered error in vc process flow: %o', error);
+                vcProcess.notifyVCProcessFailure(
+                    inputFile,
+                    getFormattedJson(error),
+                    500,
+                    "call to insight extraction api failed",
+                    getFormattedJson(error),
+                    "unimplemented",
+                    VCRequestStatus.INDEXING_API_FAILED
+                );
             }
 
             _done();
         });
     }
 
-    private isVideoIndexingRequired(file:FileModel ):boolean {
-        const logger = loggerFactory(VcRequestQueue.servicename, "isVideoIndexingRequired");
-        const isFileMoreThanHourOld = (new Date().getTime() - file?.createdAt?.getTime()) > (1000*60*60*1);
-        logger.info("file age: " + isFileMoreThanHourOld);
-
-        if(
-            (file.ocrWaitingQueue && file?.ocrWaitingQueue?.length === 0)
-            || isFileMoreThanHourOld) {
-logger.info("Video indexing needed");
-            return true;
-            }
-            else
-            return false;
-    }
-
-    private async requestVideoInsights(vcRequest: VcModel, file: FileModel) {
+    private async requestVideoInsights(vcProcess: VCProcess, file: FileModel) {
         const logger = loggerFactory(VcRequestQueue.servicename, 'requestVideoInsights');
         logger.info('requesting video indexing from ML repo');
-
         try {
         const resultPromise = got.post(`${process.env.SERVICE_API_HOST}/api/v1/vc`, {
             json: {
-                requestType: vcRequest.requestType,
-                name: vcRequest.documentName,
+                name: vcProcess.inputFileHash,
                 hash: file.hash,
-                url: file?.inputURL,
-                languageModelId : vcRequest.modelId
+                url: await FileService.getPresignedURL(file.container, file.fileKey),
+                languageModelId : vcProcess.languageModelId
             },
             responseType: 'json'
         });
 
-        await vcRequest.changeStatusTo(VCRequestStatus.INDEXING_REQUESTED);
+        await vcProcess.changeStatusTo(VCRequestStatus.INDEXING_REQUESTED);
 
         const result = await resultPromise;
 
@@ -140,26 +114,18 @@ logger.info("Video indexing needed");
 
     } catch (error) {
         logger.error('video insight api call failed: %o', error);
-        this.sendAPIFailureAlert(vcRequest, file, error.code, 'API call failed', getFormattedJson(error));
+        vcProcess.notifyVCProcessFailure(
+            file, 
+            getFormattedJson(error),
+            error.code, 
+            'Video insight extraction API call failed', 
+            getFormattedJson(error),
+            "unimplemented",
+            VCRequestStatus.INDEXING_REQUEST_FAILED
+            );
     }
 
         return null;
-    }
-
-    private sendAPIFailureAlert(vcRequest: VcModel, file: FileModel|null, code: number, errorReason: string, errorResponse: string = '') {
-emailService.sendInternalDiagnosticEmail(ExceptionMessageTemplates.getVideoInsightAPIFailureMessage({
-    code: code,
-    reason: errorReason,
-    stackTrace: errorResponse,
-    correlationId: 'to be implemented',
-    userId: vcRequest.userId,
-    vcRequestId: vcRequest.vcRequestId,
-    requestType: vcRequest.requestType,
-    modelId: vcRequest.modelId,
-    inputFileId: vcRequest.inputFileId,
-    inputURL: file?.inputURL,
-    documentName: vcRequest.documentName
-}));
     }
 
 }

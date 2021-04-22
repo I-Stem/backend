@@ -55,4 +55,6 @@ router.get("/emailReport", UniversityController.downloadData);
 router.post("/domainAcess/:action", UniversityController.updateAutoDomainAccess)
 
 router.get("/studentsCount", UniversityController.studentsCount);
+
+router.post("/request", UniversityController.createOrganizationRequest);
 export default router;

@@ -5,7 +5,8 @@
  */
 
 import * as jwt from "jsonwebtoken";
-import User, { UserRoleEnum } from "../../../models/User";
+import UserModel from "../../../domain/user/User";
+import { UserRoleEnum, UserType } from "../../../domain/user/UserConstants";
 import Locals from "../../../providers/Locals";
 import { Request, Response, NextFunction } from "express";
 import { createResponse, response } from "../../../utils/response";
@@ -14,10 +15,8 @@ import loggerFactory from "../../../middlewares/WinstonLogger";
 import { Http } from "winston/lib/winston/transports";
 import { packRules } from "@casl/ability/extra";
 import { abilitiesforUser } from "../../../middlewares/Abilities";
-import UserModel from "../../../domain/user/User";
-import { UserType } from "../../../domain/user/UserConstants";
-import UniversityModel  from "../../../domain/organization/OrganizationModel";
-import {UniversityRoles, UniversityAccountStatus} from "../../../domain/organization";
+import {OrganizationModel}  from "../../../domain/organization";
+import {UniversityRoles, UniversityAccountStatus} from "../../../domain/organization/OrganizationConstants";
 
 export const enum UniversityStatus {
     REGISTRATION_PENDING = "REGISTRATION_PENDING",
@@ -71,15 +70,10 @@ class Login {
                 res,
                 user
             );
-            let university;
-            if (
-                user.role === UniversityRoles.STAFF ||
-                user.role === UserRoleEnum.ADMIN
-            ) {
-                university = await UniversityModel.getUniversityByCode(
+            const university = await OrganizationModel.getUniversityByCode(
                     user.organizationCode
                 );
-            }
+
             logger.info(`Login Successful for ${req.body.email}`);
             const token = Login.generateJWTTokenForUser(user);
             return createResponse(res, HttpStatus.OK, `Login successful`, {
@@ -95,6 +89,8 @@ class Login {
                     showOnboardStaffCard: user.showOnboardStaffCard,
                     showOnboardStudentsCard: user.showOnboardStudentsCard,
                     escalationSetting: university?.escalationHandledBy,
+                    handleAccessibilityRequests:
+                        university?.handleAccessibilityRequests,
                     userPreferences: user.userPreferences,
                 },
                 token,
@@ -122,7 +118,7 @@ class Login {
             user.role == UniversityRoles.STAFF
         ) {
             try {
-                const university = await UniversityModel.getUniversityByCode(
+                const university = await OrganizationModel.getUniversityByCode(
                     user.organizationCode
                 );
                 if (

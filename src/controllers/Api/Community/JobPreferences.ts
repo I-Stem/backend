@@ -24,15 +24,10 @@ class JobPreferencesController {
             "addJobPreference"
         );
         logger.info("Request Received: %o", req.body);
-        const jobPreferenceInstance = plainToClass(
-            JobPreferencesModel,
-            req.body
-        );
+
+        const jobPreferenceInstance = new JobPreferencesModel(req.body);
         const user = await UserModel.getUserById(res.locals.user.id);
-        await jobPreferenceInstance.persistJobPreferences(
-            res.locals.user.id,
-            user?.fullname
-        );
+        jobPreferenceInstance.persistJobPreferences(res.locals.user.id);
 
         if (user !== null) {
             emailService.reportJobApplication(
@@ -40,7 +35,7 @@ class JobPreferencesController {
                     user: user,
                     formData: getFormattedJson({
                         ...req.body,
-                        inputFileId: (
+                        resumeLink: (
                             await FileModel.getFileById(req.body.inputFileId)
                         )?.inputURL,
                     }),

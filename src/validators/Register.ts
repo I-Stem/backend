@@ -7,7 +7,12 @@ import { UserType } from "../domain/user/UserConstants";
 
 const registrationSchema = Joi.object({
     userType: Joi.string()
-        .allow(UserType.BUSINESS, UserType.UNIVERSITY, UserType.I_STEM, UserType.VOLUNTEER)
+        .allow(
+            UserType.BUSINESS,
+            UserType.UNIVERSITY,
+            UserType.I_STEM,
+            UserType.VOLUNTEER
+        )
         .required(),
     verificationLink: Joi.string().required(),
     organizationName: Joi.string(),
@@ -31,7 +36,8 @@ const registrationSchema = Joi.object({
         })
         .min(3),
     verifyToken: Joi.string().allow(""),
-    context: Joi.string().allow("")
+    context: Joi.string().allow(""),
+    invitationType: Joi.string().allow(""),
 });
 
 export default registrationSchema;
