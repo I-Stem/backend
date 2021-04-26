@@ -7,12 +7,17 @@ import {InvitedUserModel,
     InvitedUser,
     StudentDetail,
 } from "../../../domain/InvitedUserModel";
-import UniversityModel from "../../../domain/organization/OrganizationModel";
+import {InvitationType} from "../../../domain/InvitedUserModel/InvitedUserConstants";
+import {OrganizationModel} from "../../../domain/organization";
 import {
     DomainAccessStatus,
     UniversityAccountStatus,
-} from "../../../domain/organization";
-import UserModel, { CardPreferences } from "../../../domain/user/User";
+    OrganizationRequestedType,
+    UniversityRoles,
+    OrganizationRequestStatus
+} from "../../../domain/organization/OrganizationConstants";
+import UserModel, { CardPreferences, Themes } from "../../../domain/user/User";
+import {UserType } from "../../../domain/user/UserConstants";
 import emailService from "../../../services/EmailService";
 import AuthMessageTemplates from "../../../MessageTemplates/AuthTemplates";
 import {AdminReviewModel} from "../../../domain/AdminReviewModel";
@@ -21,7 +26,7 @@ import {
     ReviewEnum,
     ReviewRequestType,
 } from "../../../domain/AdminReviewModel/AdminReviewConstants";
-
+import {RequestedOrganizationModel} from "../../../domain/organization/RequestedOrganization";
 class UniversityController {
     static servicename = "University Controller";
     public static async index(req: Request, res: Response) {
@@ -37,7 +42,7 @@ class UniversityController {
             );
             const searchString = req.query.searchString || "";
 
-            const details = await UniversityModel.getStudentsByUniversityCode(
+            const details = await OrganizationModel.getStudentsByUniversityCode(
                 res.locals.user.organizationCode,
                 Number(req.query.limit),
                 Number(req.query.offset),
@@ -75,7 +80,7 @@ class UniversityController {
         );
         const studentId = req.query.studentId;
         try {
-            const data = await UniversityModel.getStudentActivityByUserId(
+            const data = await OrganizationModel.getStudentActivityByUserId(
                 String(studentId)
             );
             return createResponse(res, HttpStatus.OK, "Success", data);
@@ -91,7 +96,7 @@ class UniversityController {
             methodname
         );
         try {
-            const university = await UniversityModel.getUniversityByCode(
+            const university = await OrganizationModel.getUniversityByCode(
                 res.locals.user.organizationCode
             );
             if (university) {
@@ -189,7 +194,7 @@ class UniversityController {
                 ValidateSchema.emailSchema.validate({ email }).error
                     ?.message !== undefined
         );
-        const data: InvitedUserModel[] = [];
+        const data: InvitedUser[] = [];
         if (errors)
             return createResponse(
                 res,
@@ -239,7 +244,10 @@ class UniversityController {
         );
 
         try {
-            await InvitedUserModel.persistInvitedUser(data);
+            await InvitedUserModel.persistInvitedUser(
+                data,
+                InvitationType.ORGANIZATION
+            );
         } catch (err) {
             logger.error("error in adding user: %o", err);
             return createResponse(
@@ -262,7 +270,7 @@ class UniversityController {
             methodname
         );
         logger.info("Request Received: %o", req.body);
-        const universityInstance = new UniversityModel(req.body);
+        const universityInstance = new OrganizationModel(req.body);
 
         try {
             await universityInstance.registerUniversity(
@@ -292,7 +300,7 @@ class UniversityController {
             methodname
         );
         logger.info("Request Received: %o", req.body);
-        const universityInstance = new UniversityModel(req.body);
+        const universityInstance = new OrganizationModel(req.body);
         try {
             await universityInstance.updateUniversity(
                 req.body,
@@ -321,7 +329,7 @@ class UniversityController {
         );
         logger.info("Request Received: %o", req.body);
         try {
-            const metricsData = await UniversityModel.getMetricsByUniversityCode(
+            const metricsData = await OrganizationModel.getMetricsByUniversityCode(
                 res.locals.user.organizationCode
             );
             if (metricsData) {
@@ -348,7 +356,10 @@ class UniversityController {
         }
     }
 
-    public static async handleRequest(req: Request, res, Response) {
+    public static async handleRequest(
+        req: Request,
+        res: Response
+    ): Promise<any> {
         const logger = loggerFactory(
             UniversityController.servicename,
             "handleRequest"
@@ -356,17 +367,21 @@ class UniversityController {
 
         logger.info("got organization code: " + req.params.organizationCode);
         try {
-            const university = await UniversityModel.getUniversityByCode(
+            const university = await RequestedOrganizationModel.getDetailsByOrganizationCode(
                 req.params.organizationCode
             );
-            const firstUser = await UserModel.getUserById(
-                university.registeredByUser || ""
-            );
-            if (firstUser !== null) {
+            let userType;
+            if (
+                university?.organizationType ===
+                OrganizationRequestedType.BUSINESS
+            ) {
+                userType = UserType.BUSINESS;
+            } else {
+                userType = UserType.UNIVERSITY;
+            }
+            const data: InvitedUser[] = [];
+            if (university !== null) {
                 if (req.params.action?.toUpperCase() === "APPROVED") {
-                    await university.changeAccountStatusTo(
-                        UniversityAccountStatus.APPROVED
-                    );
                     await AdminReviewModel.getInstance({
                         requestType: ReviewRequestType.ORGANIZATION,
                         status: ReviewEnum.REVIEWED,
@@ -374,20 +389,26 @@ class UniversityController {
                         reviewerId: res.locals.user.id,
                         adminReviewStatus: AdminReviewStatus.APPROVED,
                     }).updateStatus();
-                    emailService.sendEmailToUser(
-                        firstUser,
-                        AuthMessageTemplates.getNewOrganizationRequestApprovalMessage(
-                            {
-                                name: firstUser?.fullname,
-                                organizationName: firstUser?.organizationName,
-                                userType: firstUser?.userType,
-                            }
-                        )
+
+                    data.push({
+                        email: university.registeredByUserEmail || "",
+                        fullName: university.registeredByUserName,
+                        university: university.organizationCode || "",
+                        role: UniversityRoles.STAFF,
+                        userType: userType,
+                    });
+                    await InvitedUserModel.persistInvitedUser(
+                        data,
+                        InvitationType.FIRST_USER,
+                        university.organizationName
+                    );
+                    await RequestedOrganizationModel.updateStatus(
+                        university?.organizationCode,
+                        OrganizationRequestStatus.APPROVED,
+                        req.body.handleAccessibilityRequests,
+                        req.body.showRemediationSetting
                     );
                 } else if (req.params.action?.toUpperCase() === "REJECTED") {
-                    university.changeAccountStatusTo(
-                        UniversityAccountStatus.REJECTED
-                    );
                     await AdminReviewModel.getInstance({
                         requestType: ReviewRequestType.ORGANIZATION,
                         status: ReviewEnum.REVIEWED,
@@ -395,18 +416,24 @@ class UniversityController {
                         reviewerId: res.locals.user.id,
                         adminReviewStatus: AdminReviewStatus.REJECTED,
                     }).updateStatus();
-                    emailService.sendEmailToUser(
-                        firstUser,
+                    emailService.sendEmailToOrganization(
+                        university.registeredByUserEmail || "",
                         AuthMessageTemplates.getNewOrganizationRegistrationRequestRejectionMessage(
                             {
-                                name: firstUser?.fullname,
-                                organizationName: firstUser?.organizationName,
+                                name: university?.registeredByUserName || "",
+                                organizationName: university?.organizationName,
                             }
                         )
                     );
+                    await RequestedOrganizationModel.updateStatus(
+                        university?.organizationCode,
+                        OrganizationRequestStatus.REJECTED
+                    );
                 }
             } else {
-                logger.error("couldn't find the user who created university");
+                logger.error(
+                    "couldn't find the organization details for organization code"
+                );
             }
         } catch (error) {
             logger.error("encountered error: %o", error);
@@ -432,17 +459,23 @@ class UniversityController {
         logger.info(
             `Card Preferences for user: ${req.body.showOnboardStaffCard}. ${req.body.showOnboardStudentsCard}`
         );
-        const showOnboardStaffCard: boolean = req.body.showOnboardStaffCard;
+        const showOnboardStaffCard: boolean =
+            req.body.cardPreferences?.showOnboardStaffCard;
         const showOnboardStudentsCard: boolean =
-            req.body.showOnboardStudentsCard;
+            req.body.cardPreferences?.showOnboardStudentsCard;
         const cardPrefernces: CardPreferences = {
             showOnboardStaffCard,
             showOnboardStudentsCard,
         };
+        const themes: Themes = {
+            colorTheme: req.body.themes?.colorTheme,
+            fontTheme: req.body.themes?.fontTheme,
+        };
         try {
             const user = UserModel.updateUniversityCardsForUser(
                 res.locals.user.id,
-                cardPrefernces
+                cardPrefernces,
+                themes
             );
             logger.info(user);
         } catch (error) {
@@ -513,7 +546,7 @@ class UniversityController {
     }
 
     public static async downloadData(req: Request, res: Response) {
-        const url = await UniversityModel.emailStudentDataForUniversityAsCsv(
+        const url = await OrganizationModel.emailStudentDataForUniversityAsCsv(
             res.locals.user.organizationCode,
             res.locals.user.id
         );
@@ -525,12 +558,12 @@ class UniversityController {
 
     public static async updateAutoDomainAccess(req: Request, res: Response) {
         if (req.params.action.toUpperCase() === "APPROVED") {
-            UniversityModel.updateDomainAccessStatus(
+            OrganizationModel.updateDomainAccessStatus(
                 req.body.code,
                 DomainAccessStatus.VERIFIED
             );
         } else if (req.params.action.toUpperCase() === "REJECTED") {
-            UniversityModel.updateDomainAccessStatus(
+            OrganizationModel.updateDomainAccessStatus(
                 req.body.code,
                 DomainAccessStatus.REJECTED
             );
@@ -544,6 +577,28 @@ class UniversityController {
             reviewerId: res.locals.user.id,
         }).updateStatus();
         return createResponse(res, HttpStatus.OK, "Domain access updated");
+    }
+
+    public static async createOrganizationRequest(req: Request, res: Response) {
+        const orgRequest = await new RequestedOrganizationModel(
+            req.body
+        ).persist();
+        await AdminReviewModel.getInstance({
+            requestType: ReviewRequestType.ORGANIZATION,
+            status: ReviewEnum.REQUESTED,
+            organizationRequest: {
+                organizationName: req.body.organizationName,
+                organizationType: req.body.organizationType,
+                userEmail: req.body.registeredByUserEmail,
+                userName: req.body.registeredByUserName,
+                organizationCode: orgRequest.organizationCode,
+            },
+        }).persist();
+        return createResponse(
+            res,
+            HttpStatus.OK,
+            "New request for organization creation"
+        );
     }
 }
 

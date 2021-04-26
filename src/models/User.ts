@@ -10,8 +10,8 @@ import Ledger from "./Ledger";
 import * as mongoose from "mongoose";
 import * as crypto from "crypto";
 import loggerFactory from "../middlewares/WinstonLogger";
-import { OAuthProvider, OtherUserRoles, UserType } from "../domain/user/UserConstants";
-import { UniversityRoles } from "../domain/organization";
+import { OAuthProvider, OtherUserRoles, UserType, UserRoleEnum, ServiceRoleEnum, ColorThemes, FontThemes, UserStatusEnum } from "../domain/user/UserConstants";
+import { UniversityRoles } from "../domain/organization/OrganizationConstants";
 
 const mongooseFuzzySearching = require("mongoose-fuzzy-searching");
 const servicename = "User";
@@ -69,24 +69,6 @@ tokens:any[];
     currentStatus: string;
 }
 
-export enum UserRoleEnum {
-    USER = "USER",
-    ADMIN = "ADMIN",
-}
-
-export enum UserStatusEnum {
-    USER_CREATED = "USER_CREATED",
-    VERIFY_USER_MAIL_SENT = "VERIFY_USER_MAIL_SENT",
-    USER_VERIFIED = "USER_VERIFIED",
-    ROLE_UPGRADE_REQUEST_RECIEVED = "ROLE_UPGRADE_REQUEST_RECIEVED",
-    ROLE_UPGRADE_REQUEST_MAIL_SENT = "ROLE_UPGRADE_REQUEST_MAIL_SENT",
-    ROLE_UPGRADE_REQUEST_COMPLETE = "ROLE_UPGRADE_REQUEST_COMPLETE",
-}
-
-export const enum ServiceRoleEnum {
-    REGULAR = "REGULAR",
-    PREMIUM = "PREMIUM",
-}
 
 // Define the User Schema
 export const UserSchema = new mongoose.Schema(

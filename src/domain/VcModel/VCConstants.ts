@@ -7,6 +7,7 @@ export enum VideoExtractionType {
 export enum CaptionOutputFormat {
     SRT = "srt",
     TXT = "txt",
+    ZIP = "zip"
 }
 
 export enum VCRequestStatus {

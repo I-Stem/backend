@@ -17,7 +17,10 @@ import { getFormattedJson } from "../utils/formatter";
 import * as pdfJS from "pdfjs-dist/es5/build/pdf";
 import AFCDbModel from "../models/AFC";
 import UserModel from "../domain/user/User";
-class AfcRequestQueue {
+import {AFCProcess} from "../domain/AFCProcess";
+import FileService from "../services/FileService";
+
+export class AfcRequestQueue {
     public queue: any;
     static servicename = "AFCRequestQueue";
 
@@ -55,7 +58,7 @@ class AfcRequestQueue {
             });
         this.process();
     }
-    public dispatch(_data: AfcModel): void {
+    public dispatch(_data: {inputFile: FileModel, afcProcessData: AFCProcess}): void {
         const methodName = "dispatch";
         const logger = loggerFactory(AfcRequestQueue.servicename, methodName);
         logger.info("Adding message to queue: %o", _data);
@@ -65,148 +68,65 @@ class AfcRequestQueue {
         this.queue.add(_data, options);
     }
 
-    private isOCRRequiredForDocType(
-        docType: DocType,
-        file: FileModel
-    ): boolean {
-        switch (docType) {
-            case DocType.MATH:
-                if (file.mathOcrFileUrl) {
-                    return false;
-                }
-                break;
-            case DocType.NONMATH:
-                if (file.ocrFileURL) {
-                    return false;
-                }
-                break;
-            default:
-                return true;
-        }
-        return true;
-    }
+public             async makeOCRRequest(_job: any, _done: any) {
+    const logger = loggerFactory(AfcRequestQueue.servicename, "makeOCRRequest");
+    try {
+        const afcProcess = new AFCProcess(_job.data.afcProcessData);
+        const file = new FileModel(_job.data.inputFile);
 
-    private isOCRRequired(file: FileModel, docType: DocType): boolean {
-        const logger = loggerFactory(
-            AfcRequestQueue.servicename,
-            "isOCRRequired"
-        );
-        if (FileModel.isMathDocType(docType)) {
-            if (
-                !file?.mathOcrWaitingQueue ||
-                file?.mathOcrWaitingQueue?.length === 0
-            ) {
-                logger.info("OCR needed");
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            if (!file?.ocrWaitingQueue || file?.ocrWaitingQueue?.length === 0) {
-                logger.info("OCR needed");
-                return true;
-            } else {
-                return false;
-            }
-        }
-    }
+                const fileData = await FileService.getFileDataByS3Key(file.container, file.fileKey);
 
-    private process(): void {
-        const logger = loggerFactory(AfcRequestQueue.servicename, "process");
-        this.queue.process(async (_job: any, _done: any) => {
-            try {
-                const afcRequest = new AfcModel(_job.data);
-                const file = await FileModel.getFileById(
-                    afcRequest.inputFileId
-                );
-                await AfcModel.updateAfcPageCount(
-                    afcRequest.afcRequestId,
-                    file?.inputURL || ""
-                );
-                if (!file) {
-                    logger.info("couldn't file by id");
-                    throw Error("no file with such id");
-                }
-                if (
-                    this.isOCRRequiredForDocType(afcRequest.docType, file) ||
-                    file?.OCRVersion !== process.env.OCR_VERSION
-                ) {
-                    // OCR is not completed or version change
-                    logger.info("OCR is pending or OCR version is different");
-                    logger.info(
-                        `Current OCR Version: ${file?.OCRVersion} New OCR Version: ${process.env.OCR_VERSION}`
+                    const response = await this.requestOCR(
+                        file,
+                        afcProcess,
+                        fileData,
                     );
-                    file?.updateOCRVersion(process.env.OCR_VERSION || "");
-                    if (this.isOCRRequired(file, afcRequest.docType)) {
-                        logger.info("read file with id: " + file?.fileId);
-                        const filePath = String(file?.inputURL || "");
-                        https.get(filePath, async (fileData: any) => {
-                            const response = await this.requestOCR(
-                                file,
-                                afcRequest,
-                                filePath,
-                                fileData
-                            );
-                            if (response !== null) {
-                                afcRequest.changeStatusTo(
-                                    AFCRequestStatus.OCR_REQUEST_ACCEPTED
-                                );
-                                file?.addRequestToWaitingQueue(
-                                    afcRequest.afcRequestId,
-                                    afcRequest.docType
-                                );
-                            }
-                        });
-                    } else {
-                        afcRequest.changeStatusTo(AFCRequestStatus.OCR_SKIPPED);
-                        file?.addRequestToWaitingQueue(
-                            afcRequest.afcRequestId,
-                            afcRequest.docType
+                    if (response !== null) {
+                        afcProcess.changeStatusTo(
+                            AFCRequestStatus.OCR_REQUEST_ACCEPTED
                         );
                     }
-                } else {
-                    afcRequest.changeStatusTo(AFCRequestStatus.OCR_SKIPPED);
-                    AfCResponseQueue.dispatch({
-                        fileId: file.fileId,
-                        afcRequestId: _job.data.afcRequestId,
-                    });
-                }
-            } catch (error) {
-                logger.error("got error in afc request queue %o", error);
-            }
-            _done();
-        });
+
+    } catch (error) {
+        logger.error("got error in afc request queue %o", error);
+    }
+    _done();
+};
+
+    private process(): void {
+        this.queue.process(this.makeOCRRequest);
     }
 
     public async requestOCR(
         file: FileModel,
-        afcRequest: AfcModel,
-        filePath: string,
+        afcProcess: AFCProcess,
         inputFileData: any
     ) {
-        const user = await UserModel.getUserById(afcRequest.userId);
         const logger = loggerFactory(AfcRequestQueue.servicename, "requestOCR");
-        logger.info("afc request: %o", afcRequest);
+        
         const options = {
             url: `${process.env.SERVICE_API_HOST}/api/v1/ocr`,
             method: "POST",
             resolveWithFullResponse: true,
             formData: {
                 file: {
-                    value: inputFileData,
+                    value: inputFileData.Body,
                     options: {
-                        filename: filePath.split("/").pop(),
-                    },
+                        filename: file.name
+                    }
                 },
                 hash: file?.hash,
-                name: file?.hash,
-                doc_type: afcRequest?.docType,
-            },
+                container: file.container,
+                file_key: file.fileKey,
+                name:  file?.name,
+                doc_type: afcProcess.ocrType,
+                ocr_version: afcProcess.ocrVersion
+            }
         };
-        logger.info("sending request to OCR service");
+        logger.info(`sending request to OCR service for process: ${afcProcess.processId}`);
         try {
             const ocrAPIResultPromise = request(options);
-            afcRequest.changeStatusTo(AFCRequestStatus.OCR_REQUESTED);
+            afcProcess.changeStatusTo(AFCRequestStatus.OCR_REQUESTED);
 
             const ocrAPIResult = await ocrAPIResultPromise;
             logger.info("status code: " + ocrAPIResult.statusCode);
@@ -222,64 +142,36 @@ class AfcRequestQueue {
                     ocrAPIResult.statusCode,
                     ocrAPIResult.body
                 );
-                afcRequest.changeStatusTo(
+                afcProcess.changeStatusTo(
                     AFCRequestStatus.OCR_REQUEST_REJECTED
                 );
-                this.sendOCRAPIFailureMessage(
-                    afcRequest,
+                afcProcess.notifyAFCProcessFailure(
                     file,
                     ocrAPIResult,
                     "ocr submission rejected with non-200 status",
                     getFormattedJson(ocrAPIResult.body),
-                    "to be implemented"
+                    "to be implemented",
+                    AFCRequestStatus.OCR_FAILED
                 );
-                logger.info(
-                    "sending email to user for failure" +
-                        afcRequest.afcRequestId
-                );
-                if (user) {
-                    AfcModel.sendAfcFailureMessageToUser(user, afcRequest);
-                }
             }
         } catch (error) {
             logger.error("got error while requesting for OCR: %o", error);
-            afcRequest.changeStatusTo(AFCRequestStatus.OCR_REQUEST_REJECTED);
-            this.sendOCRAPIFailureMessage(
-                afcRequest,
+            afcProcess.changeStatusTo(AFCRequestStatus.OCR_REQUEST_REJECTED);
+            afcProcess.notifyAFCProcessFailure(
                 file,
                 null,
                 "ocr api submision to aa failed.",
                 getFormattedJson(error),
-                "to be implemented"
+                "to be implemented",
+                AFCRequestStatus.OCR_FAILED
             );
-            logger.info(
-                "sending email to user for failure" + afcRequest.afcRequestId
-            );
-            if (user) {
-                AfcModel.sendAfcFailureMessageToUser(user, afcRequest);
-            }
         }
 
         return null;
     }
 
-    public sendOCRAPIFailureMessage(
-        afcRequest: AfcModel,
-        file: FileModel,
-        response: any,
-        reason: string,
-        stackTrace: string,
-        correlationId: string
-    ) {
-        emailService.sendInternalDiagnosticEmail(
-            ExceptionMessageTemplates.getOCRExceptionMessage({
-                reason: reason,
-                code: response?.statusCode ? response?.statusCode : 500,
-                stackTrace: stackTrace,
-                inputURL: file?.inputURL,
-            })
-        );
-    }
+
+
 }
 
 export default new AfcRequestQueue();

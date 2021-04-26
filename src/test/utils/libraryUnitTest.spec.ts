@@ -1,21 +1,21 @@
-import {calculateAfcEsclateCredits, doesListContainElement, normalizeString} from '../../utils/library';
+import {calculateNumbersInRange, doesListContainElement, normalizeString} from '../../utils/library';
 import chai, { expect } from 'chai';
 const should = chai.should();
 
 describe('Test logic for calculation of AFC escalation credits', function() {
 
     it('Must correctly compute single range', function() {
-        const answer = calculateAfcEsclateCredits('1-10');
+        const answer = calculateNumbersInRange('1-10');
         answer.should.equal(10);
     });
 
     it('Must correctly compute multiple page ranges including spaces', function() {
-        const answer = calculateAfcEsclateCredits('1-10, 90-95, 23-28');
+        const answer = calculateNumbersInRange('1-10, 90-95, 23-28');
         answer.should.equal(22);
     });
 
     it('Must return -1 for nonnumeric page ranges', function() {
-        const answer = calculateAfcEsclateCredits('hello');
+        const answer = calculateNumbersInRange('hello');
         expect(answer !== answer).equal(true);
     });
 });

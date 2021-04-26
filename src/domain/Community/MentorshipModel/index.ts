@@ -3,8 +3,8 @@ import MentorshipDbModel from "../../../models/Mentorship";
 import {ConnectOften, SignupAs} from "./MentorshipConstants";
 
 export interface MentorshipModelProps {
-    _id: string;
-    mentorshipId: string;
+    _id?: string;
+    mentorshipId?: string;
     userId: string;
     industry: string;
     currentPosition: string;
@@ -76,17 +76,21 @@ export class MentorshipModel {
         this.contactNumber = props.contactNumber;
     }
 
-    persistMentorship(currUserId: string) {
+    async persistMentorship(currUserId: string) {
         const logger = loggerFactory(
             MentorshipModel.ServiceName,
             "persistMentorship"
         );
         this.userId = currUserId;
-        new MentorshipDbModel(this).save((err: any) => {
-            if (err) {
+        try {
+        const result = await new MentorshipDbModel(this).save();
+        this.mentorshipId = result.id;
+        return this;
+        } catch(err)  {
                 logger.error(err);
-            }
-        });
+        }
+
+        return undefined;
     }
 
     public static async updateMentorshipForUser(

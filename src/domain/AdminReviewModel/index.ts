@@ -1,10 +1,11 @@
-import { ServiceRoleEnum } from "../../models/User";
+import { ServiceRoleEnum } from "../../domain/user/UserConstants";
 import loggerFactory from "../../middlewares/WinstonLogger";
 import AdminReviewDb from "../../models/AdminReview";
 import UserModel from "../user/User";
 import {ReviewEnum, ReviewRequestType, AdminReviewStatus} from "./AdminReviewConstants";
+import {OrganizationRequestedType} from "../organization/OrganizationConstants";
 
-class ServiceRoleRequest {
+export class ServiceRoleRequest {
     userId: string;
     role: ServiceRoleEnum;
     fullName: string;
@@ -22,22 +23,28 @@ class ServiceRoleRequest {
     }
 }
 
-class OrganizationRequest {
-    organizationCode: string;
+export class OrganizationRequest {
     organizationName?: string;
-    userId?: string;
+    userName?: string;
+    organizationType?: OrganizationRequestedType;
+    userEmail?: string;
+    organizationCode?: string;
     constructor(
-        organizationCode: string,
-        userId?: string,
-        organizationName?: string
+        organizationName?: string,
+        userName?: string,
+        organizationType?: OrganizationRequestedType,
+        userEmail?: string,
+        organizationCode?: string
     ) {
-        this.userId = userId;
-        this.organizationCode = organizationCode;
+        this.organizationType = organizationType;
         this.organizationName = organizationName;
+        this.userEmail = userEmail;
+        this.userName = userName;
+        this.organizationCode = organizationCode;
     }
 }
 
-class DomainAccessRequest {
+export class DomainAccessRequest {
     organizationCode: string;
     domain: string;
     requestedBy?: string;
@@ -76,7 +83,6 @@ interface AdminReviewModelProps {
     adminReviewStatus?: AdminReviewStatus;
     reviewerId?: string;
 }
-
 
 export class AdminReviewModel implements AdminReviewModelProps {
     serviceRoleRequest?: ServiceRoleRequest;
@@ -120,12 +126,18 @@ export class AdminReviewModel implements AdminReviewModelProps {
         const logger = loggerFactory(AdminReviewModel.serviceName, "persist");
         this.statusLog = [];
         this.statusLog?.push(new StatusLifeCycle(this.status, new Date()));
-        logger.info("Persisting request for admin review");
-        await new AdminReviewDb(this).save((err: any) => {
-            if (err) {
-                logger.error(`Error persisting data, ${err}`);
+        logger.info(
+            `Persisting request for admin review: ${JSON.stringify(this)}`
+        );
+        try {
+        const result = await new AdminReviewDb(this).save();
+        this.id = result.id;
+        return this;
+    } catch(error) {
+                logger.error(`Error persisting data, ${error}`);
             }
-        });
+
+            return undefined;
     }
 
     /**
@@ -259,7 +271,7 @@ export class AdminReviewModel implements AdminReviewModelProps {
                 reviewerId: this.reviewerId,
             },
             $push: {
-                statusLog: new StatusLifeCycle(this.status, new Date())
+                statusLog: new StatusLifeCycle(this.status, new Date()),
             },
         }).exec();
     }
@@ -281,14 +293,13 @@ export class AdminReviewModel implements AdminReviewModelProps {
                 fullName: user?.fullname,
             };
         } else if (request?.requestType === ReviewRequestType.ORGANIZATION) {
-            const user = await UserModel.getUserById(
-                request.organizationRequest?.userId || ""
-            );
+            const { organizationRequest } = request;
             return {
-                organizationName: request.organizationRequest?.organizationName,
-                fullName: user?.fullname,
-                email: user?.email,
-                orgCode: request.organizationRequest?.organizationCode,
+                organizationName: organizationRequest?.organizationName,
+                fullName: organizationRequest?.userName,
+                email: organizationRequest?.userEmail,
+                orgType: organizationRequest?.organizationType,
+                orgCode: organizationRequest?.organizationCode
             };
         }
         return {

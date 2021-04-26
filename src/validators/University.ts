@@ -16,6 +16,7 @@ const UniversitySchema = Joi.object({
     noStudentsWithDisability: Joi.string().allow(""),
     domainAccess: Joi.string().allow(""),
     escalationHandledBy: Joi.string().allow(""),
+    handleAccessibilityRequests: Joi.string().allow(""),
 });
 
 export default UniversitySchema;

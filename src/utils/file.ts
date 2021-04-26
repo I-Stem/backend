@@ -1,10 +1,13 @@
-// const aws = require("aws-sdk");
 import S3 from "aws-sdk/clients/s3";
 import * as fs from "fs";
 import { Request, Response, NextFunction } from "express";
 import loggerFactory from "../middlewares/WinstonLogger";
 
+const aws = require('aws-sdk');
+
+
 let pkgcloud = require("pkgcloud"); // a cloud API standard library: https://github.com/nodejitsu/pkgcloud
+
 let s3client = pkgcloud.storage.createClient({
     provider: "amazon",
     keyId: process.env.AWS_ACCESS_KEY_ID, // access key id
@@ -13,20 +16,15 @@ let s3client = pkgcloud.storage.createClient({
 });
 const fileName = "fileUtils";
 
-const getBlobName = (originalName: string) => {
-    // const identifier = Math.random()
-    //     .toString()
-    //     .replace(/0\./, ''); // remove "0." from start of string
+const s3 = new S3({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION,
+});
 
-    return `inputFile-${originalName.replace(/\s+/g, "-").toLowerCase()}`;
-};
+
 
 const uploadFileToS3Bucket = (hash, filename, file, contentType: string) => {
-    const s3 = new S3({
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        region: process.env.AWS_REGION,
-    });
     const logger = loggerFactory(fileName, "uploadFileToS3Bucket");
     logger.info("Uploading file to S3 bucket.......");
     const upload = s3.upload(
@@ -87,42 +85,18 @@ export async function saveStudentsReportCSV(
 
 export function onFileSaveToS3(
     file: any,
-    filename: string,
-    hash: string,
-    next: NextFunction
+    container: string,
+    fileKey:string,
+    contentType:string
 ) {
-    let readStream = fs.createReadStream(file.path);
-    let writeStream = s3client.upload(
+    const logger = loggerFactory(fileName, "onFileSaveToS3");
+    return s3.upload(
         {
-            container: process.env.AWS_BUCKET_NAME + `/files/${hash}`,
-            remote: getBlobName(filename),
-        },
-        function (err: any) {
-            console.log(err);
-            next();
-        }
-    );
-    writeStream
-        .on("success", function (file: any) {
-            next(file.location);
-        })
-        .on("error", function (err: any) {
-            console.log(err);
-        });
-    readStream.pipe(writeStream);
+            Bucket: container,
+            Key: fileKey,
+            Body: file,
+            ContentType: contentType,
+        }).promise();
 
-    // file.pipe(
-    //     s3client.upload({
-    //         container: process.env.AWS_BUCKET_NAME,
-    //         remote: getBlobName(filename)
-    //     }, function (err: any) {
-    //         next();
-    //         console.log(err);
-    //     }
-    // ))
 
-    // else{
-    //     let readStream = fs.createReadStream(file);
-    //     readStream.pipe(writeStream);
-    // }
 }

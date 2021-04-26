@@ -3,8 +3,8 @@
  *
  */
 
-import { UniversityRoles } from "../../domain/organization";
-import { ServiceRoleEnum, UserRoleEnum } from "../../models/User";
+import { UniversityRoles } from "../../domain/organization/OrganizationConstants";
+import { ServiceRoleEnum, UserRoleEnum } from "../../domain/user/UserConstants";
 import { UserPreferences} from "../../domain/user";
 import {OAuthProvider,  UserType, OtherUserRoles} from "../../domain/user/UserConstants";
 

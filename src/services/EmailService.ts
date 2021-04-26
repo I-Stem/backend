@@ -14,7 +14,7 @@ const sendEmail = mailer.config({
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
         sslEnabled: true,
-        region: process.env.AWS_REGION,
+        region: process.env.AWS_SES_REGION,
     }),
 });
 
@@ -94,6 +94,16 @@ class EmailService {
         logger.info("sending email to user: " + user.email);
         message.receiverEmail = user.email;
         message.receiverId = user.userId;
+        EmailQueue.dispatch(message);
+    }
+
+    public async sendEmailToOrganization(email: string, message: MessageModel) {
+        const logger = loggerFactory(
+            EmailService.ServiceName,
+            "sendEmailToOrganization"
+        );
+        logger.info("sending email to organization: " + email);
+        message.receiverEmail = email;
         EmailQueue.dispatch(message);
     }
 

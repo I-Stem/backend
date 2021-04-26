@@ -9,8 +9,7 @@ import FileController from '../controllers/Api/File';
 
 const router = Router();
 
-router.post('/', formidable({
-    maxFileSize: Number(process.env.MAX_FILE_UPLOAD_LIMIT) * 1024 * 1024
-}), FileController.upload);
+router.post('/', FileController.upload);
 
+router.get('/:serviceType/:fileKey', FileController.getFileForUser);
 export default router;

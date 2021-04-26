@@ -12,12 +12,12 @@ export enum EscalationTemplateNames {
 export interface RaiseEscalationTicketMessageProps {
     afcRequestDetails?: string;
     vcRequestDetails?: string;
-    sourceFileDetails: string;
     inputFileURL: string;
-    docOutputFileURL: string;
+    docOutputFileURL?: string;
     escalatorId: string;
     escalatorName: string | number;
     escalatorEmail: string;
+    escalatorOrganization: string;
     escalationOf?: string | number;
     pageRanges?: string;
 }
@@ -44,12 +44,10 @@ class EscalationMessageTemplates {
 <ul>
 <li>Escalator Name: ${props.escalatorName}</li>
 <li>Escalator Email: ${props.escalatorEmail}</li>
-<li>Escalator Id: ${props.escalatorId}</li>
+<li>Escalator Organization: ${props.escalatorOrganization}</li>
 <li>escalated page range: ${props.pageRanges}</li>
 <li>Input file: <a href="${props.inputFileURL}">link</a></li>
-<li>output word file: <a href="${props.docOutputFileURL}">link</a></li>
 <li>afc details: <pre>${props.afcRequestDetails}</pre></li>
-<li>source file details: <pre>${props.sourceFileDetails}</pre></li>
 </ul>
     `,
         });
@@ -89,7 +87,6 @@ class EscalationMessageTemplates {
         <li>output file: <a href="${props.docOutputFileURL}">link</a></li>
         <li>video insight details: <pre>${props.vcRequestDetails}</pre></li>
         <li>Escalation Requested for: ${props.escalationOf}</li>
-        <li>source file details: <pre>${props.sourceFileDetails}</pre></li>
         </ul>
             `,
         });

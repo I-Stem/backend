@@ -1,17 +1,21 @@
-import { plainToClass } from "class-transformer";
 import AfcDbModel from "../../models/AFC";
 import ReviewModel from "../ReviewModel";
 import loggerFactory from "../../middlewares/WinstonLogger";
-import FileModel from "../FileModel";
+import FileModel, {FileCoordinate} from "../FileModel";
 import { getFormattedJson } from "../../utils/formatter";
 import EmailService from "../../services/EmailService";
 import ExceptionMessageTemplates from "../../MessageTemplates/ExceptionTemplates";
-import * as pdfJS from "pdfjs-dist/es5/build/pdf";
 import emailService from "../../services/EmailService";
 import UserModel from "../user/User";
+import {NoSuchUserError} from "../user/UserDomainErrors";
 import LedgerModel from "../LedgerModel";
 import ServiceRequestTemplates from "../../MessageTemplates/ServiceRequestTemplates";
 import {AFCRequestStatus, DocType, AFCRequestOutputFormat, AFCTriggerer} from "./AFCConstants";
+import {HandleAccessibilityRequests} from "../organization/OrganizationConstants";
+import {calculateNumbersInRange} from "../../utils/library";
+import AfcRequestQueue from "../../queues/afcRequest";
+import MLModelQueue from "../../queues/MLModelQueue";
+import {AFCProcess} from "../AFCProcess";
 
 export class AFCRequestLifecycleEvent {
     status: AFCRequestStatus;
@@ -26,7 +30,9 @@ export class AFCRequestLifecycleEvent {
 export interface AFCRequestProps {
     _id?: string;
     afcRequestId?: string;
+    associatedProcessId?: string;
     userId: string;
+    organizationCode: string;
     inputFileId: string;
     outputURL?: string;
     documentName: string;
@@ -36,23 +42,28 @@ export interface AFCRequestProps {
     statusLog?: AFCRequestLifecycleEvent[];
     outputFormat: AFCRequestOutputFormat;
     tag?: string;
-    escalatedId?: string;
+    escalationId?: string;
     reviews?: ReviewModel[];
     triggeredBy: AFCTriggerer;
     triggeringCaseId?: string;
     inputFileLink?: string;
-    expiryTime?: Date;
+    outputFile?: FileCoordinate;
+    otherRequests?: string;
+    resultType?: HandleAccessibilityRequests;
+    pagesForRemediation?: string;
 }
 
 export class AfcModel implements AFCRequestProps {
     static serviceName = "AfcModel";
 
     afcRequestId: string;
+    associatedProcessId: string;
     userId: string;
+    organizationCode: string;
     inputFileId: string;
     outputURL?: string;
     documentName: string = "";
-    pageCount?: number;
+    pageCount: number;
     docType: DocType = DocType.NONMATH;
     status: AFCRequestStatus = AFCRequestStatus.REQUEST_INITIATED;
     statusLog: AFCRequestLifecycleEvent[] = [
@@ -60,31 +71,39 @@ export class AfcModel implements AFCRequestProps {
     ];
     outputFormat: AFCRequestOutputFormat;
     tag?: string;
-    escalatedId?: string;
+    escalationId?: string;
     reviews?: ReviewModel[] = [];
     triggeredBy: AFCTriggerer = AFCTriggerer.USER;
     triggeringCaseId?: string;
     inputFileLink?: string;
-    expiryTime?: Date;
+    outputFile?: FileCoordinate;
+    otherRequests?: string;
+    resultType?: HandleAccessibilityRequests;
+    pagesForRemediation?: string;
 
     constructor(props: AFCRequestProps) {
         this.afcRequestId = props.afcRequestId || props._id || "";
+        this.associatedProcessId = props.associatedProcessId || "";
         this.inputFileId = props.inputFileId;
         this.outputFormat = props.outputFormat;
+        this.outputFile = props.outputFile;
         this.outputURL = props.outputURL;
         this.userId = props.userId;
+        this.organizationCode = props.organizationCode;
         this.documentName = props.documentName;
         this.triggeredBy = props.triggeredBy;
         this.triggeringCaseId = props.triggeringCaseId;
         this.status = props.status || AFCRequestStatus.REQUEST_INITIATED;
         this.statusLog = props.statusLog || [];
-        this.pageCount = props.pageCount;
+        this.pageCount = props.pageCount || 0;
         this.docType = props.docType;
         this.tag = props.tag;
-        this.escalatedId = props.escalatedId;
+        this.escalationId = props.escalationId;
         this.reviews = props.reviews;
         this.inputFileLink = props.inputFileLink;
-        this.expiryTime = props.expiryTime;
+        this.otherRequests = props.otherRequests;
+        this.resultType = props.resultType;
+        this.pagesForRemediation = props.pagesForRemediation;
     }
 
     public static async createAndPersist(props: AFCRequestProps) {
@@ -97,6 +116,20 @@ export class AfcModel implements AFCRequestProps {
         request.afcRequestId = result._id;
 
         return request;
+    }
+
+    public async persist() {
+        const logger = loggerFactory(AfcModel.serviceName, "persist");
+
+        try {
+            const result = await new AfcDbModel(this).save();
+this.afcRequestId= result.id;
+            return this;
+        } catch (error) {
+            logger.error("couldn't persist afc request data: %o", error);
+        }
+
+        return null;
     }
 
     public static async averageResolutionTime(userId: string) {
@@ -143,14 +176,59 @@ export class AfcModel implements AFCRequestProps {
         ).lean();
     }
 
-    public async updateFormattingResults(outputURL: string, pages: number) {
-        this.outputURL = outputURL;
-        this.pageCount = pages;
+    public async updateFormattingResults(outputFile: FileCoordinate) {
+        this.outputURL = `/file/afc/${this.afcRequestId}`;
+        this.outputFile = outputFile;
         return await AfcDbModel.findByIdAndUpdate(this.afcRequestId, {
-            outputURL: outputURL,
-            pageCount: pages,
+            outputURL: this.outputURL,
+            outputFile: outputFile,
         }).lean();
     }
+
+    public async completeAFCRequestProcessing(outputFile: FileCoordinate) {
+        const logger = loggerFactory(
+            AfcModel.serviceName,
+            "completeAFCRequestProcessing"
+        );
+
+        await this.updateFormattingResults(outputFile);
+        if (this.triggeredBy === AFCTriggerer.USER) {
+            if(this.resultType === HandleAccessibilityRequests.AUTO) {
+                const chargeUser = AfcModel.chargeUserForService(
+                    this.userId,
+                    this.pageCount || 0,
+                    "Document accessibility conversion of file:" + this.documentName
+                );
+                const sendEmail = this.sendServiceCompleteEmailToUser();
+                await Promise.all([chargeUser, sendEmail]);
+                } else if(this.status === AFCRequestStatus.RESOLVED_FILE_USED) {
+const pagesRemediated = calculateNumbersInRange(this.pagesForRemediation || "");
+
+const file = await FileModel.getFileById(outputFile.fileId || "");
+//hard coding output file format to be same as remediated file
+await AfcDbModel.findByIdAndUpdate(this.afcRequestId, {
+    outputFormat: file?.name.substr(file?.name.lastIndexOf(".")+1).toUpperCase() as AFCRequestOutputFormat || AFCRequestOutputFormat.WORD
+});
+                    const chargeUser = AfcModel.chargeUserForService(
+                        this.userId,
+                        pagesRemediated * Number(process.env.REMEDIATION_CREDITS_PER_PAGE),
+                        "Manual remediation of file:" + this.documentName
+                    );
+                    const sendEmail = this.sendServiceCompleteEmailToUser();
+                }
+        } else {
+            logger.info("Triggereing video captioning model training flow");
+
+            await LedgerModel.createDebitTransaction(
+                this.userId,
+                this.pageCount || 0,
+                "custom language model training"
+            );
+
+            MLModelQueue.dispatch(this);
+        }
+    }
+
     public static async saveReview(
         afcRequestId: string,
         review: ReviewModel
@@ -165,7 +243,7 @@ export class AfcModel implements AFCRequestProps {
     public static async getAfcModelById(id: string) {
         const logger = loggerFactory(AfcModel.serviceName, "getAfcModelById");
         const afcDbRequest = await AfcDbModel.findById(id).lean();
-        logger.info("afc id: %o", afcDbRequest?._id);
+
         if (afcDbRequest !== null) {
             const afcRequest = new AfcModel(afcDbRequest);
             logger.info("retrieved afc model: %o", afcRequest.afcRequestId);
@@ -255,126 +333,6 @@ export class AfcModel implements AFCRequestProps {
         return { count, rating };
     }
 
-    public static afcCronHandler(
-        expiryTimeGTE: string,
-        expiryTimeLTE: string
-    ): void {
-        const logger = loggerFactory(AfcModel.serviceName, "afcCronHandler");
-        const failedRequests: string[] = [];
-        AfcDbModel.find({
-            expiryTime: {
-                $gte: new Date(expiryTimeGTE),
-                $lte: new Date(expiryTimeLTE),
-            },
-        })
-            .exec()
-            .then((afc) => {
-                const status = [
-                    AFCRequestStatus.REQUEST_INITIATED,
-                    AFCRequestStatus.OCR_REQUESTED,
-                    AFCRequestStatus.OCR_REQUEST_ACCEPTED,
-                    AFCRequestStatus.OCR_COMPLETED,
-                    AFCRequestStatus.OCR_SKIPPED,
-                    AFCRequestStatus.FORMATTING_REQUESTED,
-                ];
-                let pendingStatus = false;
-
-                if (afc) {
-                    afc.forEach((afcReq) => {
-                        pendingStatus = status.some(
-                            (afcStatus) => afcStatus === afcReq?.status
-                        );
-                        if (pendingStatus) {
-                            FileModel.afcInputFileHandler(afcReq);
-                            failedRequests.push(getFormattedJson(afcReq));
-                        }
-                    });
-                }
-
-                if (!pendingStatus) {
-                    logger.info(
-                        `No failed AFC Request found during cron sweep for interval ${expiryTimeGTE} and ${expiryTimeLTE}`
-                    );
-                } else {
-                    logger.info("notifying I-Stem for failures");
-                    EmailService.sendInternalDiagnosticEmail(
-                        ExceptionMessageTemplates.getAFCFailureMessage({
-                            data: failedRequests,
-                            timeInterval: [expiryTimeGTE, expiryTimeLTE],
-                        })
-                    );
-                }
-            })
-            .catch((err) =>
-                logger.error(`Error occured in filtering AFC ${err}`)
-            );
-    }
-
-    public static async setExpiryTime(
-        afcId: string,
-        creationTime: number,
-        pageNumber: number
-    ) {
-        const expiryTime = new Date(
-            creationTime + Math.ceil(pageNumber / 100) * 1000 * 60 * 60
-        );
-        await AfcDbModel.findByIdAndUpdate(afcId, { expiryTime });
-    }
-
-    public static async updateAfcPageCount(
-        afcId: string,
-        filePath: string
-    ): Promise<any> {
-        const logger = loggerFactory(
-            AfcModel.serviceName,
-            "updateAfcPageCount"
-        );
-        let pageCount = 0;
-        let creationTime = 0;
-        logger.info(`AFC REQUEST ID: ${afcId}`);
-        const extension = filePath.split(".").pop()?.toUpperCase();
-        logger.info(`EXTENSION FOR FILE: ${extension}`);
-        if (extension === AFCRequestOutputFormat.PDF) {
-            logger.info("url: ", filePath);
-            pdfJS.getDocument({ url: filePath }).promise.then(
-                async function (doc) {
-                    const numPages = doc.numPages;
-                    logger.info("# Document Loaded");
-                    logger.info("Number of Pages: " + numPages);
-                    const afc = await AfcDbModel.findByIdAndUpdate(
-                        afcId,
-                        {
-                            pageCount: numPages,
-                        },
-                        { new: true }
-                    ).lean();
-                    pageCount = afc?.pageCount || 0;
-                    creationTime = new Date(
-                        ((afc as unknown) as any).createdAt
-                    ).getTime();
-                    await AfcModel.setExpiryTime(
-                        afc?._id,
-                        creationTime,
-                        pageCount
-                    );
-                },
-                function (err) {
-                    logger.error("Error", err);
-                }
-            );
-        } else {
-            const afc = await AfcDbModel.findByIdAndUpdate(
-                afcId,
-                {
-                    pageCount: 1,
-                },
-                { new: true }
-            ).lean();
-            pageCount = afc?.pageCount || 0;
-        }
-        return pageCount;
-    }
-
     public static sendAfcFailureMessageToUser(
         user: UserModel,
         afcRequest: AfcModel
@@ -390,9 +348,9 @@ export class AfcModel implements AFCRequestProps {
 
     public static async updateEscalatedAfcRequestWithRemediatedFile(
         afcId: string,
-        url: string
+         remediatedFile: FileCoordinate
     ) {
-        await AfcDbModel.findByIdAndUpdate(afcId, { outputURL: url });
+        await AfcDbModel.findByIdAndUpdate(afcId, { outputFile: remediatedFile});
     }
 
     public static async updateAfcStatusById(
@@ -410,6 +368,24 @@ export class AfcModel implements AFCRequestProps {
         }).exec();
     }
 
+    public async initiateAFCProcessForRequest(
+        afcProcess: AFCProcess,
+        inputFile: FileModel
+    ) {
+        if (afcProcess?.isOCRComplete()) {
+            await afcProcess.addAFCRequest(this.afcRequestId);
+            afcProcess.formatOutput();
+        } else if (afcProcess.isOCRInProgress()) {
+            afcProcess.addAFCRequest(this.afcRequestId);
+        } else {
+            AfcRequestQueue.dispatch({
+                afcProcessData: afcProcess,
+                inputFile: inputFile,
+            });
+            afcProcess.addAFCRequest(this.afcRequestId);
+        }
+    }
+
     public static async chargeUserForService(
         userId: string,
         amount: number,
@@ -418,35 +394,28 @@ export class AfcModel implements AFCRequestProps {
         await LedgerModel.createDebitTransaction(userId, amount, reason);
     }
 
-    public static async sendServiceCompleteEmailToUser(
-        user: UserModel,
-        afcRequest: AfcModel
-    ): Promise<void> {
+    public async sendServiceCompleteEmailToUser(): Promise<void> {
+        const logger = loggerFactory(AfcModel.serviceName, "sendServiceCompleteEmailToUser");
+        try {
+            const user = await UserModel.getUserById(this.userId);
+            if(user !== null) {
         await emailService.sendEmailToUser(
             user,
             ServiceRequestTemplates.getServiceRequestComplete({
-                documentName: afcRequest.documentName,
-                outputURL: afcRequest.outputURL || "",
+                documentName: this.documentName,
+                outputURL: this.outputURL || "",
                 userName: user.fullname,
                 userId: user.userId,
             })
         );
+            } 
+            else
+            throw new NoSuchUserError(`couldn't get user by id: ${this.userId} found while sending email for afc id: ${this.afcRequestId}`);
+        } catch(error) {
+            logger.error("error: %o", error);
+        }
     }
 
-    public static async afcRequestTransactionAndNotifyUser(
-        afcReq: AfcModel,
-        amount: number,
-        reason: string,
-        user: UserModel
-    ): Promise<void> {
-        const chargeUser = AfcModel.chargeUserForService(
-            afcReq.userId,
-            amount,
-            reason
-        );
-        const sendEmail = AfcModel.sendServiceCompleteEmailToUser(user, afcReq);
-        await Promise.all([chargeUser, sendEmail]);
-    }
 }
 
 

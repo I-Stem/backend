@@ -12,15 +12,9 @@ import {
     AFCRequestStatus,
     DocType,
 } from "../domain/AfcModel/AFCConstants";
-
+import {HandleAccessibilityRequests} from "../domain/organization/OrganizationConstants";
 
 const mongooseFuzzySearching = require("mongoose-fuzzy-searching");
-
-/*
-export interface IAFCModel extends mongoose.Model<mongoose.Document, AfcModel> {
-    fuzzySearch(arg: any, query: any): any;
-}
-*/
 
 const allowedAFCRequestStatuses = [
     AFCRequestStatus.REQUEST_INITIATED,
@@ -43,6 +37,8 @@ export const AFCSchema = new mongoose.Schema(
     {
         // correlationId: { type: String },
         userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        organizationCode: { type: String },
+        associatedProcessId: { type: String },
         triggeredBy: {
             type: String,
             enum: ["user", "vc_model"],
@@ -54,6 +50,11 @@ export const AFCSchema = new mongoose.Schema(
         },
         inputFileId: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
         outputURL: { type: String },
+        outputFile: {
+            container: { type: String },
+            fileKey: { type: String },
+            fileId: { type: mongoose.Schema.Types.ObjectId, ref: "file" },
+        },
         documentName: { type: String },
         pageCount: { type: Number },
         docType: { type: String, enum: ["MATH", "NONMATH"] },
@@ -82,13 +83,29 @@ export const AFCSchema = new mongoose.Schema(
                 AFCRequestOutputFormat.TEXT,
             ],
             index: true,
-        }, // 1 - word, 2 - xhtml, 3 - text, 4 - pdf, 5 - mp3
+        },
         tag: { type: String, index: true },
+        escalationId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Escalation",
+            index: true,
+        },
         escalatedPageRange: { type: String },
         review: ReviewSchema,
         reviews: [ReviewSchema],
         inputFileLink: { type: String },
         expiryTime: { type: Date },
+        otherRequests: { type: String },
+        resultType: {
+            type: String,
+            enum: [
+                HandleAccessibilityRequests.AUTO,
+                HandleAccessibilityRequests.MANUAL,
+            ],
+        },
+        pagesForRemediation: {
+            type: String
+        }
     },
     {
         toJSON: { virtuals: true, getters: true },

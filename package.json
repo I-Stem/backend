@@ -13,6 +13,7 @@
     "bcrypt": "^5.0.0",
     "body-parser": "^1.19.0",
     "bull": "^3.14.0",
+    "busboy": "^0.3.1",
     "class-transformer": "^0.3.1",
     "compression": "^1.7.3",
     "connect-mongo": "^3.2.0",
@@ -135,14 +136,16 @@
     "eslint-fix": "eslint --fix --ext .js,.ts .",
     "seed": "tsc --project ./tsconfig.json && node seed/template.js",
     "seed:dev": "node seed.js",
-    "code-cov": "nyc cross-env TS_NODE_FILES=true mocha --exit --require ts-node/register  src/test/**/*.ts"
+    "code-cov": "nyc cross-env TS_NODE_FILES=true DOTENV_CONFIG_PATH=.env.test  mocha -r dotenv/config --exit --require ts-node/register  src/test/**/*.ts"
   },
   "nyc": {
     "extension": [
       ".ts"
     ],
     "exclude": [
+      "**/*.spec.ts",
       "**/*.d.ts",
+      "**/interfaces/validators/*.ts",
       "**/models/*.ts",
       "**/test/**",
       "**/controllers/**",
@@ -150,7 +153,8 @@
       "**/routes/**",
       "**/seed/**",
       "**/.adminbro/**",
-      "**/coverage/**"
+      "**/coverage/**",
+      "**/docs/**"
     ],
     "require": [
       "ts-node/register"

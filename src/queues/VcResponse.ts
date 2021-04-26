@@ -5,14 +5,17 @@ import User, { IUserModel } from '../models/User';
 import ArchivedUser from '../models/ArchivedUser';
 import File from '../models/File';
 import {VcModel} from '../domain/VcModel';
-import { VCRequestStatus, VideoExtractionType } from '../domain/VcModel/VCConstants';
-import FileModel from '../domain/FileModel';
+import { VCRequestStatus, VideoExtractionType, CaptionOutputFormat} from '../domain/VcModel/VCConstants';
+import FileModel, {UserContext} from '../domain/FileModel';
+import {FileProcessAssociations} from '../domain/FileModel/FileConstants';
 import got from 'got';
 import emailService from '../services/EmailService';
 import ExceptionMessageTemplates, { ExceptionTemplateNames } from '../MessageTemplates/ExceptionTemplates';
 import { getFormattedJson } from '../utils/formatter';
+import {VCProcess} from "../domain/VCProcess";
+import {VCLanguageModelType} from "../domain/VCProcess/VCProcessConstants";
 
-class VcResponseQueue {
+export class VcResponseQueue {
     static servicename = 'VcResponseQueue';
     public queue: any;
     constructor() {
@@ -45,7 +48,7 @@ class VcResponseQueue {
             });
         this.process();
     }
-    public dispatch(data: {vcRequestId: string, videoId: string} ): void {
+    public dispatch(data: VCProcess): void {
         const options = {
             attempts: 2
         };
@@ -53,80 +56,118 @@ class VcResponseQueue {
     }
 
     private process(): void {
-        const logger = loggerFactory(VcResponseQueue.servicename, 'process');
-        this.queue.process(async (_job: any, _done: any) => {
-            logger.info('started processing: %o', _job.data);
 
-            try {
-            const vcRequest = await VcModel.getVCRequestById(_job.data.vcRequestId);
-
-            if (vcRequest !== null) {
-                const result: any = await this.requestVideoInsightsByRequestType(_job.data.videoId, vcRequest);
-
-                const results = Promise.all([
-                    vcRequest.updateOutputURLAndVideoLength(result.url, Math.ceil(result.duration)),
-                     vcRequest.chargeUserForRequest(),
-                    vcRequest.notifyUserForResults()
-                                    ]);
-                await results;
-                await vcRequest.changeStatusTo(VCRequestStatus.COMPLETED);
-
-            }
-            } catch (error) {
-                logger.error('Error occurred: %o', error);
-            }
-            _done();
-        });
+        this.queue.process(this.startVideoInsightResultAPI);
     }
 
-    private async requestVideoInsightsByRequestType(videoId: string, vcRequest: VcModel) {
-        const logger = loggerFactory(VcResponseQueue.servicename, 'requestVideoInsightsByRequestType');
-        logger.info('requesting video insights for id: ' + videoId);
+    public async startVideoInsightResultAPI(_job: any, _done: any) {
+        const logger = loggerFactory(VcResponseQueue.servicename, 'startVideoInsightResultAPI');
+        logger.info('started processing: %o', _job.data);
 
-        const file = await FileModel.getFileById(vcRequest.inputFileId);
+        try {
+        const vcProcess = new VCProcess(_job.data);
+        const inputFile = await FileModel.getFileByHash(vcProcess.inputFileHash);
+const videoInsights = new Map<VideoExtractionType, CaptionOutputFormat[]>([
+[VideoExtractionType.CAPTION, [CaptionOutputFormat.SRT, CaptionOutputFormat.TXT]],
+[VideoExtractionType.OCR, [CaptionOutputFormat.TXT]],
+[VideoExtractionType.OCR_CAPTION, [CaptionOutputFormat.SRT, CaptionOutputFormat.TXT]]
+]);
+try {
+if(inputFile !== null) {
+const waitingRequestDetails = await vcProcess.getWaitingRequestsAndUsers();
+const userContexts: UserContext[] = [];
+waitingRequestDetails.forEach(waitingRequest => {
+userContexts.push(new UserContext(waitingRequest.user?.userId || "", FileProcessAssociations.VC_OUTPUT, waitingRequest.user?.organizationCode || ""));
+});
+
+for(const [insightType, outputFormats] of videoInsights.entries()) {
+for(const outputFormat of outputFormats) {
+const fileKey = `${inputFile?.userContexts[0].organizationCode}/${inputFile?.fileId}/${vcProcess.insightAPIVersion}/${vcProcess.languageModelType === VCLanguageModelType.STANDARD ? VCLanguageModelType.STANDARD : vcProcess.languageModelId}/${VCProcess.getOutputZipFileName(insightType, outputFormat)}`;
+const result: any = await this.requestVideoInsightsByRequestType(vcProcess, inputFile, insightType, outputFormat, inputFile.container, fileKey);
+if(result !== null) {
+await vcProcess.changeStatusTo(VCRequestStatus.COMPLETED);
+
+let outputFile = await FileModel.findFileByHash(result.hash);
+if (outputFile === null ) {
+outputFile = new FileModel({
+userContexts:userContexts,
+hash: result.hash,
+container: process.env.AWS_BUCKET_NAME || "",
+name: inputFile.name
+});
+await outputFile.persist();
+await outputFile.setFileLocation(fileKey);
+}
+await vcProcess.updateVideoInsightResult(insightType, outputFormat, outputFile);
+} 
+
+}
+}
+
+await vcProcess.completeWaitingRequests();
+} 
+else 
+throw new Error("inputFile missing with id: "+ vcProcess.inputFileId);
+           
+        } catch(error) {
+            logger.error("error: %o", error);
+            vcProcess.notifyVCProcessFailure(
+                inputFile,
+                getFormattedJson(error),
+                500,
+                `error in calling insight result api`,
+                getFormattedJson(error),
+                "unimplemented",
+                VCRequestStatus.INSIGHT_FAILED
+            );
+                        }
+        } catch (error) {
+            logger.error('Error occurred: %o', error);
+        }
+        _done();
+    }
+    
+
+    private async requestVideoInsightsByRequestType(vcProcess: VCProcess, inputFile:FileModel, insightType: VideoExtractionType, outputFormat: CaptionOutputFormat, container:string, fileKey:string) {
+        const logger = loggerFactory(VcResponseQueue.servicename, 'requestVideoInsightsByRequestType');
+        logger.info('requesting video insights for id: ' + vcProcess.externalVideoId);
+
         try {
             const resultPromise = got.post(`${process.env.SERVICE_API_HOST}/api/v1/vc/callback`, {
                 json: {
-                    id: videoId,
-                    type: vcRequest.requestType,
-                    hash: file?.hash,
-                    documentName: vcRequest.documentName,
-                    outputFormat: vcRequest.outputFormat
+                    id: vcProcess.externalVideoId,
+                    type: insightType,
+                    container: container,
+                    file_key: fileKey,
+                    outputFormat: outputFormat.toLowerCase()
                 },
                 responseType: 'json'
             });
 
-            await vcRequest.changeStatusTo(VCRequestStatus.INSIGHT_REQUESTED);
+            await vcProcess.changeStatusTo(VCRequestStatus.INSIGHT_REQUESTED);
 
             const result = await resultPromise;
 
             if (result.statusCode === 200) {
                 return result.body;
+            } else {
+                vcProcess.changeStatusTo(VCRequestStatus.INSIGHT_FAILED);
             }
-
         } catch (error) {
             logger.error('video insight api call failed: %o', error);
-            vcRequest.changeStatusTo(VCRequestStatus.INSIGHT_FAILED);
-            this.sendAPIFailureAlert(vcRequest, file, error.code, 'Insight extraction API call failed', getFormattedJson(error));
+            vcProcess.changeStatusTo(VCRequestStatus.INSIGHT_FAILED);
+            vcProcess.notifyVCProcessFailure(inputFile,
+                getFormattedJson(error),
+                502,
+                `call to insight result api failing for process id: ${vcProcess.processId}`,
+getFormattedJson(error),
+"unimplemented",
+VCRequestStatus.INSIGHT_FAILED
+                );
         }
 
         return null;
         }
-
-    private sendAPIFailureAlert(vcRequest: VcModel, file: FileModel|null, code: number, errorReason: string, errorResponse: string = '') {
-        emailService.sendInternalDiagnosticEmail(ExceptionMessageTemplates.getVideoInsightAPIFailureMessage({
-            code: code,
-            reason: errorReason,
-            stackTrace: errorResponse,
-            correlationId: 'to be implemented',
-            userId: vcRequest.userId,
-            vcRequestId: vcRequest.vcRequestId,
-            requestType: vcRequest.requestType,
-            inputFileId: vcRequest.inputFileId,
-            inputURL: file?.inputURL,
-            documentName: vcRequest.documentName
-        }));
-            }
 
 }
 

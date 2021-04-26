@@ -8,22 +8,30 @@ import {AFCRequestOutputFormat} from "../domain/AfcModel/AFCConstants";
 
 const afcSchema = Joi.object({
     documentName: Joi.string(),
-    tag: Joi.string().allow(''),
-    outputFormat: Joi.string().allow(AFCRequestOutputFormat.WORD, AFCRequestOutputFormat.HTML, AFCRequestOutputFormat.PDF, AFCRequestOutputFormat.MP3, AFCRequestOutputFormat.TEXT).required(),
-    inputFileId: Joi.string(),
+    tag: Joi.string().allow(""),
+    outputFormat: Joi.string()
+        .allow(
+            AFCRequestOutputFormat.WORD,
+            AFCRequestOutputFormat.HTML,
+            AFCRequestOutputFormat.PDF,
+            AFCRequestOutputFormat.MP3,
+            AFCRequestOutputFormat.TEXT
+        )
+        .required(),
+    inputFileId: Joi.string().required(),
     docType: Joi.string().required(),
     status: Joi.number().optional().min(0).max(5),
-    escalatedPageRange: Joi.string().optional()
-    .when('status', {
+    escalatedPageRange: Joi.string().optional().when("status", {
         is: 4,
         then: Joi.required(),
-        otherwise: Joi.optional()
+        otherwise: Joi.optional(),
     }),
     review: {
         rating: Joi.number(),
-        text: Joi.string()
+        text: Joi.string(),
     },
-    inputFileLink: Joi.string().optional()
+    otherRequests: Joi.string().allow(""),
+    resultType: Joi.string().allow(""),
 });
 
 export default afcSchema;

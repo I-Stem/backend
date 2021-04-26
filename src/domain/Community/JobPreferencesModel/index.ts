@@ -3,6 +3,7 @@ import JobPreferencesDbModel from "../../../models/JobPreferences";
 import UserModel from "../../user/User";
 import User from "../../../models/User";
 import {HighestQualification, JobNature, HiringAction} from "./JobPreferencesConstants";
+import FileModel from "../../FileModel";
 
 export class HiringActionLog {
     action?: HiringAction;
@@ -19,9 +20,37 @@ export class HiringActionLog {
     }
 }
 
+export interface JobPreferencesProps {
+    _id?: string;
+    jobPreferenceId?: string;
+    userId: string;
+    userName?: string;
+    seekingJob: Boolean;
+    natureOfJob: JobNature;
+    industry: string;
+    idealPosition: string;
+    highestEducation: HighestQualification;
+    highestDegree: string;
+    major: string;
+    workExperience: string;
+    totalExperience: string;
+    associatedDisabilities: string[];
+    currentPlace: string;
+    canRelocate: Boolean;
+    linkedIn: string;
+    portfolioLink: string;
+    resumeLink: string;
+    needCareerHelp: Boolean;
+    inputFileId: string;
+    interested: string[];
+    ignored: string[];
+    actionLog: HiringActionLog[];
+}
+
 export class JobPreferencesModel {
     static ServiceName = "JobPreferencesModel";
 
+    jobPreferenceId?: string;
     userId: string = "";
     userName?: string = "";
     seekingJob: Boolean = false;
@@ -40,23 +69,58 @@ export class JobPreferencesModel {
     portfolioLink: string = "";
     resumeLink: string = "";
     needCareerHelp: Boolean = false;
-    inputFileId: String = "";
+    inputFileId: string = "";
     interested: string[] = [];
     ignored: string[] = [];
     actionLog: HiringActionLog[] = [];
 
-    persistJobPreferences(currUserId: string, currUserName?: string) {
+    constructor(props: JobPreferencesProps) {
+        this.jobPreferenceId = props.jobPreferenceId || props._id;
+        this.userId = props.userId;
+        this.userName = props.userName;
+        this.seekingJob = props.seekingJob;
+        this.natureOfJob = props.natureOfJob;
+        this.industry = props.industry;
+        this.idealPosition = props.idealPosition;
+        this.highestEducation = props.highestEducation;
+        this.highestDegree = props.highestDegree;
+        this.major = props.major;
+        this.workExperience = props.workExperience;
+        this.totalExperience = props.totalExperience;
+        this.associatedDisabilities = props.associatedDisabilities;
+        this.currentPlace = props.currentPlace;
+        this.canRelocate = props.canRelocate;
+        this.linkedIn = props.linkedIn;
+        this.portfolioLink = props.portfolioLink;
+        this.resumeLink = props.resumeLink;
+        this.needCareerHelp = props.needCareerHelp;
+        this.inputFileId = props.inputFileId;
+        this.interested = props.interested;
+        this.ignored = props.ignored;
+        this.actionLog = props.actionLog;
+    }
+
+    async persistJobPreferences(currUserId: string) {
         const logger = loggerFactory(
             JobPreferencesModel.ServiceName,
             "persistJobPreferences"
         );
+        try {
+        const user = await UserModel.getUserById(currUserId);
+        const resume = await FileModel.getFileById(this.inputFileId);
         this.userId = currUserId;
-        this.userName = currUserName;
-        new JobPreferencesDbModel(this).save((err: any) => {
-            if (err) {
+        this.userName = user?.fullname;
+        this.resumeLink = resume?.inputURL || "";
+
+        const result = await new JobPreferencesDbModel(this).save();
+        this.jobPreferenceId = result.id;
+
+        return this;
+        } catch(err) {
                 logger.error(err);
             }
-        });
+
+            return undefined;
     }
 
     public static async jobPreferencesForUser(userId: string) {
@@ -75,5 +139,4 @@ export class JobPreferencesModel {
         }
     }
 }
-
 
