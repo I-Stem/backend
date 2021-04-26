@@ -23,7 +23,7 @@ import { FileProcessAssociations } from "../domain/FileModel/FileConstants";
 import {AFCProcess} from "../domain/AFCProcess";
 import FileService from "../services/FileService";
 
-class AfcResponseQueue {
+export class AfcResponseQueue {
     public queue: Bull.Queue;
     static servicename = "AFCResponseQueue";
 
@@ -71,105 +71,108 @@ class AfcResponseQueue {
     }
 
     private process(): void {
-        const logger = loggerFactory(AfcResponseQueue.servicename, "process");
-        this.queue.process(async (_job: any, _done: any) => {
-            const afcProcess = new AFCProcess(_job.data.afcProcess);
-            try {
+        this.queue.process(this.makeFormattingRequest);
+    }
+
+    public             async makeFormattingRequest(_job: any, _done: any) {
+        const logger = loggerFactory(AfcResponseQueue.servicename, "makeFormattingRequest");
+        const afcProcess = new AFCProcess(_job.data.afcProcess);
+        try {
 logger.info("starting format conversion requests");
-                const results = _job.data.outputFormats.map(async (outputFormat:AFCRequestOutputFormat) => {
-                    try {
-                        logger.info("requesting for format: " + outputFormat);
-                        const inputFile = await FileModel.getFileById(afcProcess.inputFileId);
-                        const fileKey = `${inputFile?.userContexts[0].organizationCode}/${inputFile?.fileId}/${afcProcess.ocrType}/${afcProcess.ocrVersion}/afcOutput.${outputFormat.toLowerCase()}`;
-                    const formattingAPIResult = await this.requestFormatting(
-                        afcProcess,
-                        outputFormat,
-                        process.env.AWS_BUCKET_NAME || "",
-                        fileKey
-                    );
-                    if (formattingAPIResult.code === 500) {
-                        afcProcess.notifyAFCProcessFailure(
-                            null,
-                            getFormattedJson( formattingAPIResult),
-                            `Formatting API failed for output format: ${outputFormat}`,
-                            getFormattedJson( formattingAPIResult),
+            const results = _job.data.outputFormats.map(async (outputFormat:AFCRequestOutputFormat) => {
+                try {
+                    logger.info("requesting for format: " + outputFormat);
+                    const inputFile = await FileModel.getFileById(afcProcess.inputFileId);
+                    const fileKey = `${inputFile?.userContexts[0].organizationCode}/${inputFile?.fileId}/${afcProcess.ocrType}/${afcProcess.ocrVersion}/afcOutput.${outputFormat.toLowerCase()}`;
+                const formattingAPIResult = await this.requestFormatting(
+                    afcProcess,
+                    outputFormat,
+                    process.env.AWS_BUCKET_NAME || "",
+                    fileKey
+                );
+                if (formattingAPIResult.code === 500) {
+                    afcProcess.notifyAFCProcessFailure(
+                        null,
+                        getFormattedJson( formattingAPIResult),
+                        `Formatting API failed for output format: ${outputFormat}`,
+                        getFormattedJson( formattingAPIResult),
 "to be implemented",
 AFCRequestStatus.FORMATTING_FAILED
-                        );
-
-                        return false;
-                        }
-
-                    logger.info(
-                        "received response from formatting service: %o",
-                        formattingAPIResult
                     );
 
-                    if ( formattingAPIResult?.code === 200) {
-                        const userContexts:UserContext[] = [];
-                        _job.data.requestingUsers.forEach(element => {
-                            userContexts.push(new UserContext(element.userId, FileProcessAssociations.AFC_OUTPUT, element.organizationCode));
-                        });
+                    return false;
+                    }
 
-                        let outputFile = await FileModel.findFileByHash(formattingAPIResult.hash);
-                        if(outputFile === null) {
-                        outputFile = new FileModel({
-                            userContexts: userContexts,
+                logger.info(
+                    "received response from formatting service: %o",
+                    formattingAPIResult
+                );
+
+                if ( formattingAPIResult?.code === 200) {
+                    const userContexts:UserContext[] = [];
+                    _job.data.requestingUsers.forEach(element => {
+                        userContexts.push(new UserContext(element.userId, FileProcessAssociations.AFC_OUTPUT, element.organizationCode));
+                    });
+
+                    let outputFile = await FileModel.findFileByHash(formattingAPIResult.hash);
+                    if(outputFile === null) {
+                    outputFile = new FileModel({
+                        userContexts: userContexts,
 hash: formattingAPIResult.hash,
 container: process.env.AWS_BUCKET_NAME || "",
 fileKey : fileKey,
 name: FileModel.getFileNameByProcessAssociationType("output" + outputFormat.toLowerCase(), FileProcessAssociations.AFC_OUTPUT) || ""
-                        });
-                        await outputFile.persist();
-                        outputFile.setFileLocation(fileKey);
-                    }
-                        afcProcess.changeStatusTo(
-                            AFCRequestStatus.FORMATTING_COMPLETED
-                        );
-                        await afcProcess.updateFormattingResult(
-                            outputFormat,
-                            outputFile
-                        );
-                } else if ( formattingAPIResult?.code === 500) {
-                    logger.error("formatting api failing for " + outputFormat );
-                    afcProcess.notifyAFCProcessFailure(
-                        inputFile,
-                        `formatting API returned 500 in response`,
-                        `Formatting API failed for output format: ${outputFormat} with 500 in response`,
-    "",
-    "to be implemented",
-    AFCRequestStatus.FORMATTING_FAILED
+                    });
+                    await outputFile.persist();
+                    outputFile.setFileLocation(fileKey);
+                }
+                    afcProcess.changeStatusTo(
+                        AFCRequestStatus.FORMATTING_COMPLETED
                     );
-                    }
-                return true;
-            } catch(error) {
-                logger.error("formatting api failing for " + outputFormat + " %o", error);
+                    await afcProcess.updateFormattingResult(
+                        outputFormat,
+                        outputFile
+                    );
+            } else if ( formattingAPIResult?.code === 500) {
+                logger.error("formatting api failing for " + outputFormat );
                 afcProcess.notifyAFCProcessFailure(
-                    null,
-                    `couldn't connect to formatting api`,
-                    `Formatting API failed for output format: ${outputFormat}`,
+                    inputFile,
+                    `formatting API returned 500 in response`,
+                    `Formatting API failed for output format: ${outputFormat} with 500 in response`,
 "",
 "to be implemented",
 AFCRequestStatus.FORMATTING_FAILED
                 );
-            }
+                }
+            return true;
+        } catch(error) {
+            logger.error("formatting api failing for " + outputFormat + " %o", error);
+            afcProcess.notifyAFCProcessFailure(
+                null,
+                `couldn't connect to formatting api`,
+                `Formatting API failed for output format: ${outputFormat}`,
+"",
+"to be implemented",
+AFCRequestStatus.FORMATTING_FAILED
+            );
+        }
 
-            return false;
-            });
+        return false;
+        });
 
 await Promise.all(results);
 logger.info("finished all format conversion requests");
 afcProcess.finishPendingUserRequests();
-            } catch (error) {
-                logger.error(
-                    "encountered error in afc response flow: %o",
-                    error
-                );
-            }
+        } catch (error) {
+            logger.error(
+                "encountered error in afc response flow: %o",
+                error
+            );
+        }
 
-            _done();
-        });
+        _done();
     }
+    
 
     public async requestFormatting(
         afcProcess: AFCProcess,

@@ -21,6 +21,8 @@ export class HiringActionLog {
 }
 
 export interface JobPreferencesProps {
+    _id?: string;
+    jobPreferenceId?: string;
     userId: string;
     userName?: string;
     seekingJob: Boolean;
@@ -48,6 +50,7 @@ export interface JobPreferencesProps {
 export class JobPreferencesModel {
     static ServiceName = "JobPreferencesModel";
 
+    jobPreferenceId?: string;
     userId: string = "";
     userName?: string = "";
     seekingJob: Boolean = false;
@@ -72,6 +75,7 @@ export class JobPreferencesModel {
     actionLog: HiringActionLog[] = [];
 
     constructor(props: JobPreferencesProps) {
+        this.jobPreferenceId = props.jobPreferenceId || props._id;
         this.userId = props.userId;
         this.userName = props.userName;
         this.seekingJob = props.seekingJob;
@@ -101,16 +105,22 @@ export class JobPreferencesModel {
             JobPreferencesModel.ServiceName,
             "persistJobPreferences"
         );
+        try {
         const user = await UserModel.getUserById(currUserId);
         const resume = await FileModel.getFileById(this.inputFileId);
         this.userId = currUserId;
         this.userName = user?.fullname;
         this.resumeLink = resume?.inputURL || "";
-        new JobPreferencesDbModel(this).save((err: any) => {
-            if (err) {
+
+        const result = await new JobPreferencesDbModel(this).save();
+        this.jobPreferenceId = result.id;
+
+        return this;
+        } catch(err) {
                 logger.error(err);
             }
-        });
+
+            return undefined;
     }
 
     public static async jobPreferencesForUser(userId: string) {

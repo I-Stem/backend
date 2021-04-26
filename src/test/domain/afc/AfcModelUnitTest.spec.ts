@@ -1,12 +1,12 @@
 import { expect, should } from "chai";
-import { AfcModel } from "../../domain/AfcModel";
+import { AfcModel } from "../../../domain/AfcModel";
 import {
     AFCRequestOutputFormat,
     AFCRequestStatus,
     AFCTriggerer,
     DocType,
-} from "../../domain/AfcModel/AFCConstants";
-import db from "../dbHandler";
+} from "../../../domain/AfcModel/AFCConstants";
+import db from "../../dbHandler";
 
 describe("AFC Model Unit Tests", function () {
     const documentName = "djikstraalgoimg.png";
@@ -18,6 +18,7 @@ describe("AFC Model Unit Tests", function () {
         afcReq = await AfcModel.createAndPersist({
             docType: DocType.NONMATH,
             documentName,
+            organizationCode: "worldOrganization",
             inputFileId: "60279c1805cd7425a22e77fd",
             outputFormat: AFCRequestOutputFormat.TEXT,
             triggeredBy: AFCTriggerer.USER,

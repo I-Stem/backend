@@ -319,7 +319,7 @@ export class AFCProcess {
 
                 const failedProcessDetails: any[] = [];
 
-                results.forEach(async (afcProcess) => {
+                results.forEach(async (afcProcess:any) => {
                     const processRequests = await afcProcess?.notifyWaitingUsersAboutFailure(
                         AFCRequestStatus.OCR_FAILED
                     );

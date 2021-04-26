@@ -12,9 +12,10 @@ import got from 'got';
 import emailService from '../services/EmailService';
 import ExceptionMessageTemplates, { ExceptionTemplateNames } from '../MessageTemplates/ExceptionTemplates';
 import { getFormattedJson } from '../utils/formatter';
-import {VCProcess, VCLanguageModelType} from "../domain/VCProcess";
+import {VCProcess} from "../domain/VCProcess";
+import {VCLanguageModelType} from "../domain/VCProcess/VCProcessConstants";
 
-class VcResponseQueue {
+export class VcResponseQueue {
     static servicename = 'VcResponseQueue';
     public queue: any;
     constructor() {
@@ -55,35 +56,39 @@ class VcResponseQueue {
     }
 
     private process(): void {
-        const logger = loggerFactory(VcResponseQueue.servicename, 'process');
-        this.queue.process(async (_job: any, _done: any) => {
-            logger.info('started processing: %o', _job.data);
 
-            try {
-            const vcProcess = new VCProcess(_job.data);
-            const inputFile = await FileModel.getFileByHash(vcProcess.inputFileHash);
+        this.queue.process(this.startVideoInsightResultAPI);
+    }
+
+    public async startVideoInsightResultAPI(_job: any, _done: any) {
+        const logger = loggerFactory(VcResponseQueue.servicename, 'startVideoInsightResultAPI');
+        logger.info('started processing: %o', _job.data);
+
+        try {
+        const vcProcess = new VCProcess(_job.data);
+        const inputFile = await FileModel.getFileByHash(vcProcess.inputFileHash);
 const videoInsights = new Map<VideoExtractionType, CaptionOutputFormat[]>([
-    [VideoExtractionType.CAPTION, [CaptionOutputFormat.SRT, CaptionOutputFormat.TXT]],
+[VideoExtractionType.CAPTION, [CaptionOutputFormat.SRT, CaptionOutputFormat.TXT]],
 [VideoExtractionType.OCR, [CaptionOutputFormat.TXT]],
 [VideoExtractionType.OCR_CAPTION, [CaptionOutputFormat.SRT, CaptionOutputFormat.TXT]]
 ]);
 try {
-    if(inputFile !== null) {
-    const waitingRequestDetails = await vcProcess.getWaitingRequestsAndUsers();
-    const userContexts: UserContext[] = [];
-    waitingRequestDetails.forEach(waitingRequest => {
+if(inputFile !== null) {
+const waitingRequestDetails = await vcProcess.getWaitingRequestsAndUsers();
+const userContexts: UserContext[] = [];
+waitingRequestDetails.forEach(waitingRequest => {
 userContexts.push(new UserContext(waitingRequest.user?.userId || "", FileProcessAssociations.VC_OUTPUT, waitingRequest.user?.organizationCode || ""));
-    });
+});
 
 for(const [insightType, outputFormats] of videoInsights.entries()) {
 for(const outputFormat of outputFormats) {
-    const fileKey = `${inputFile?.userContexts[0].organizationCode}/${inputFile?.fileId}/${vcProcess.insightAPIVersion}/${vcProcess.languageModelType === VCLanguageModelType.STANDARD ? VCLanguageModelType.STANDARD : vcProcess.languageModelId}/${VCProcess.getOutputZipFileName(insightType, outputFormat)}`;
-    const result: any = await this.requestVideoInsightsByRequestType(vcProcess, inputFile, insightType, outputFormat, inputFile.container, fileKey);
-    if(result !== null) {
-    await vcProcess.changeStatusTo(VCRequestStatus.COMPLETED);
+const fileKey = `${inputFile?.userContexts[0].organizationCode}/${inputFile?.fileId}/${vcProcess.insightAPIVersion}/${vcProcess.languageModelType === VCLanguageModelType.STANDARD ? VCLanguageModelType.STANDARD : vcProcess.languageModelId}/${VCProcess.getOutputZipFileName(insightType, outputFormat)}`;
+const result: any = await this.requestVideoInsightsByRequestType(vcProcess, inputFile, insightType, outputFormat, inputFile.container, fileKey);
+if(result !== null) {
+await vcProcess.changeStatusTo(VCRequestStatus.COMPLETED);
 
-    let outputFile = await FileModel.findFileByHash(result.hash);
-    if (outputFile === null ) {
+let outputFile = await FileModel.findFileByHash(result.hash);
+if (outputFile === null ) {
 outputFile = new FileModel({
 userContexts:userContexts,
 hash: result.hash,
@@ -92,36 +97,36 @@ name: inputFile.name
 });
 await outputFile.persist();
 await outputFile.setFileLocation(fileKey);
-    }
+}
 await vcProcess.updateVideoInsightResult(insightType, outputFormat, outputFile);
-    } 
+} 
 
 }
 }
 
-vcProcess.completeWaitingRequests();
-    } 
-    else 
-    throw new Error("inputFile missing with id: "+ vcProcess.inputFileId);
-               
-            } catch(error) {
-                logger.error("error: %o", error);
-                vcProcess.notifyVCProcessFailure(
-                    inputFile,
-                    getFormattedJson(error),
-                    500,
-                    `error in calling insight result api`,
-                    getFormattedJson(error),
-                    "unimplemented",
-                    VCRequestStatus.INSIGHT_FAILED
-                );
-                            }
-            } catch (error) {
-                logger.error('Error occurred: %o', error);
-            }
-            _done();
-        });
+await vcProcess.completeWaitingRequests();
+} 
+else 
+throw new Error("inputFile missing with id: "+ vcProcess.inputFileId);
+           
+        } catch(error) {
+            logger.error("error: %o", error);
+            vcProcess.notifyVCProcessFailure(
+                inputFile,
+                getFormattedJson(error),
+                500,
+                `error in calling insight result api`,
+                getFormattedJson(error),
+                "unimplemented",
+                VCRequestStatus.INSIGHT_FAILED
+            );
+                        }
+        } catch (error) {
+            logger.error('Error occurred: %o', error);
+        }
+        _done();
     }
+    
 
     private async requestVideoInsightsByRequestType(vcProcess: VCProcess, inputFile:FileModel, insightType: VideoExtractionType, outputFormat: CaptionOutputFormat, container:string, fileKey:string) {
         const logger = loggerFactory(VcResponseQueue.servicename, 'requestVideoInsightsByRequestType');

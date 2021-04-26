@@ -151,8 +151,8 @@ class UserModel {
 
         try {
             const result = await new User(this).save();
-
-            return new UserModel(result);
+this.userId = result.id;
+            return this;
         } catch (error) {
             logger.error("couldn't persist user data: %o", error);
         }

@@ -38,7 +38,7 @@ class DomainAccessLifecycleEvent {
     }
 }
 
-export interface University {
+export interface OrganizationProps {
     _id?: string;
     universityId?: string;
     code: string;
@@ -84,7 +84,7 @@ export class OrganizationModel {
     domainAccessStatus: string;
     showRemediationSetting?: boolean;
 
-    constructor(props: University) {
+    constructor(props: OrganizationProps) {
         this.universityId = props.universityId || props._id || "";
         this.name = props.name;
         this.address = props.address || "";

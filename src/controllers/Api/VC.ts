@@ -45,7 +45,8 @@ import VcResponseQueue from "../../queues/VcResponse";
 import Credit from "../../domain/Credit";
 import {OrganizationModel} from "../../domain/organization";
 import {HandleAccessibilityRequests} from "../../domain/organization/OrganizationConstants";
-import {VCLanguageModelType, VCProcess} from "../../domain/VCProcess";
+import {VCLanguageModelType} from "../../domain/VCProcess/VCProcessConstants";
+import {VCProcess} from "../../domain/VCProcess";
 import {VCProcessInsightExtractionError} from "../../domain/VCProcess/VCProcessErrors";
 
 function mapVCRequestStatusToUIStatus(status: VCRequestStatus): number {

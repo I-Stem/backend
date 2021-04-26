@@ -20,7 +20,7 @@ import { DocType } from '../domain/AfcModel/AFCConstants';
 import {VCProcess} from "../domain/VCProcess";
 import FileService from "../services/FileService";
 
-class VcRequestQueue {
+export class VcRequestQueue {
     static servicename = 'VCRequestQueue';
     public queue: any;
     constructor() {
@@ -60,34 +60,36 @@ class VcRequestQueue {
         this.queue.add(_data, options);
     }
     private process(): void {
-        const logger = loggerFactory(VcRequestQueue.servicename, 'process');
-        this.queue.process(async (_job: any, _done: any) => {
-            logger.info('started processing: %o', _job.data);
-            const vcProcess = new VCProcess(_job.data.vcProcessData);
+        this.queue.process(this.startVideoInsightRequest);
+    }
+
+    public             async startVideoInsightRequest(_job: any, _done: any) {
+        const logger = loggerFactory(VcRequestQueue.servicename, 'startVideoInsightRequest');
+        logger.info('started processing: %o', _job.data);
+        const vcProcess = new VCProcess(_job.data.vcProcessData);
 const inputFile = new FileModel(_job.data.inputFile);
-            try {
+        try {
 const result: any = await this.requestVideoInsights(vcProcess, inputFile);
 
 if (result === null) {
 vcProcess.changeStatusTo(VCRequestStatus.INDEXING_REQUEST_FAILED);
 } else {
-    await vcProcess.updateVideoId(result.videoId);
+await vcProcess.updateVideoId(result.videoId);
 }
-            } catch (error) {
-                logger.error('encountered error in vc process flow: %o', error);
-                vcProcess.notifyVCProcessFailure(
-                    inputFile,
-                    getFormattedJson(error),
-                    500,
-                    "call to insight extraction api failed",
-                    getFormattedJson(error),
-                    "unimplemented",
-                    VCRequestStatus.INDEXING_API_FAILED
-                );
-            }
+        } catch (error) {
+            logger.error('encountered error in vc process flow: %o', error);
+            vcProcess.notifyVCProcessFailure(
+                inputFile,
+                getFormattedJson(error),
+                500,
+                "call to insight extraction api failed",
+                getFormattedJson(error),
+                "unimplemented",
+                VCRequestStatus.INDEXING_API_FAILED
+            );
+        }
 
-            _done();
-        });
+        _done();
     }
 
     private async requestVideoInsights(vcProcess: VCProcess, file: FileModel) {

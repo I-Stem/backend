@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { VCRequestStatus } from "../domain/VcModel/VCConstants";
-import {VCLanguageModelType, VCProcess} from "../domain/VCProcess";
+import {VCProcess} from "../domain/VCProcess";
+import {VCLanguageModelType} from "../domain/VCProcess/VCProcessConstants";
 
 const VCProcessSchema = new mongoose.Schema({
     inputFileHash: {type: String, required:true, index: true},

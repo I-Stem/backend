@@ -27,9 +27,23 @@ export const feedbackFormTitles = new Map([
     ],
     [FeedbackCategory.GENERIC, ""],
 ]);
+
+export interface FeedbackModelProps {
+    _id?: string;
+    feedbackId?: string;
+    userId: string;
+    feedbackFor: FeedbackCategory;
+    rating: number;
+    purpose: string;
+    likings: string;
+    dislikings: string;
+    creditsRequested: number;
+}
+
 class FeedbackModel {
     static ServiceName = "FeedbackModel";
 
+    feedbackId?: string;
     userId: string = "";
     feedbackFor: FeedbackCategory = FeedbackCategory.GENERIC;
     rating: number = 0;
@@ -38,6 +52,17 @@ class FeedbackModel {
     dislikings: string = "";
     creditsRequested: number = 0;
 
+constructor(props : FeedbackModelProps) {
+    this.feedbackId = props.feedbackId || props._id;
+    this.userId = props.userId;
+    this.feedbackFor = props.feedbackFor;
+    this.rating = props.rating;
+    this.purpose = props.purpose;
+    this.likings = props.likings;
+    this.dislikings = props.dislikings;
+    this.creditsRequested = props.creditsRequested;
+}
+
     async persistFeedback(currUserId: string) {
         const logger = loggerFactory(
             FeedbackModel.ServiceName,
@@ -45,10 +70,14 @@ class FeedbackModel {
         );
         this.userId = currUserId;
         try {
-        await new FeedbackDbModel(this).save();
+        const feedbackInstance = await new FeedbackDbModel(this).save();
+        this.feedbackId = feedbackInstance.id;
+        return this;
         } catch (err) {
                 logger.error(err);
             }
+
+            return undefined;
     }
 
     public static async getFeedbacksByUser(
