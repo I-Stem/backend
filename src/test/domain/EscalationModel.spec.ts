@@ -9,7 +9,7 @@ import {EscalationModel} from "../../domain/EscalationModel";
 import { HandleAccessibilityRequests } from '../../domain/organization/OrganizationConstants';
 import { AIServiceCategory, EscalationStatus } from '../../domain/EscalationModel/EscalationConstants';
 
-describe('domain level operation for job preferences', () => {
+describe('domain level operation for remediation process', () => {
     const requester = UserModelStubs.JohnSnow;
 const inputFile = FileModelStubs.SongOfIceAndFire;
 const afcProcess = AFCProcessStubs.afcProcess;
@@ -19,6 +19,7 @@ const remediationProcess = EscalationModelStubs.remediationProcess;
         before(async function() {
     await dbHandler.createConnection();
     await requester.persist();
+    inputFile.userContexts[0].userId = requester.userId;
     await inputFile.persist();
     afcProcess.inputFileId = inputFile.fileId;
     await afcProcess.persist();

@@ -12,7 +12,6 @@ import { FileProcessAssociations } from "../../domain/FileModel/FileConstants";
 import {AfcRequestQueue} from "../../queues/afcRequest";
 import Sinon from "sinon";
 import Credit from "../../domain/Credit";
-import {MessageQueue} from "../../queues/message";
 import AFCController from "../../controllers/Api/AFC";
 import { OrganizationModel } from "../../domain/organization";
 
