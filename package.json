@@ -4,10 +4,13 @@
   "description": "An API server built to support the workflow and AI powered services for different accommodation",
   "author": "I-Stem",
   "main": "dist",
+  "typings": "dist/controllers/API/AFC.d.ts",
   "dependencies": {
     "@casl/ability": "^4.1.6",
     "@casl/mongoose": "^3.0.3",
     "@hapi/joi": "^17.1.1",
+    "@microsoft/api-documenter": "^7.13.3",
+    "@microsoft/api-extractor": "^7.14.0",
     "@types/pdfjs-dist": "^2.1.7",
     "aws-sdk": "^2.695.0",
     "bcrypt": "^5.0.0",
@@ -136,7 +139,8 @@
     "eslint-fix": "eslint --fix --ext .js,.ts .",
     "seed": "tsc --project ./tsconfig.json && node seed/template.js",
     "seed:dev": "node seed.js",
-    "code-cov": "nyc cross-env TS_NODE_FILES=true DOTENV_CONFIG_PATH=.env.test  mocha -r dotenv/config --exit --require ts-node/register  src/test/**/*.ts"
+    "code-cov": "nyc cross-env TS_NODE_FILES=true DOTENV_CONFIG_PATH=.env.test  mocha -r dotenv/config --exit --require ts-node/register  src/test/**/*.ts",
+    "generateAPIDoc": "api-extractor run --local --verbose"
   },
   "nyc": {
     "extension": [

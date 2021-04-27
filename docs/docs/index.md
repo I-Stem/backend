@@ -4,4 +4,4 @@ title: API Documentation
 slug: /
 ---
 
-## Coming Soon!
+## [Start here](./api/index)
