@@ -1,7 +1,7 @@
 /**
- * Define AFC api
- *
- */
+* @packageDocumentation
+* External consumer facing module for document accessibility conversion service
+*/
 import { Request, Response } from "express";
 import User, { IUserModel } from "../../models/User";
 import { createResponse, response } from "../../utils/response";
@@ -58,9 +58,23 @@ function mapAFCRequestStatusToUIStatus(status: AFCRequestStatus) {
     return statusMap.get(status) || 1;
 }
 
-class AFCController {
+/**
+ * Define api for document accessibility service
+ *
+* @public
+ */
+export default class AFCController {
     static servicename = "AFC Controller";
 
+/**
+* list all the document accessibility requests raised by user
+*
+* @remarks the frontend calls this api to get the data associated for document accessibility service request in paginated form. It also allows to query document by name and tag.
+* @param req - Express request object
+* @param res - Express response object
+*
+* @public
+*/
     public static index(req: Request, res: Response) {
         let methodname = "index";
         let logger = loggerFactory(AFCController.servicename, methodname);
@@ -525,4 +539,3 @@ class AFCController {
     }
 }
 
-export default AFCController;

@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { UniversityRoles } from "../domain/organization/OrganizationConstants";
 import { UserType } from "../domain/user/UserConstants";
 import { InvitedUserEnum } from "../domain/InvitedUserModel/InvitedUserConstants";
-import {InvitedUserModel} from "../domain/InvitedUserModel";
+import {InvitedUser} from "../domain/InvitedUserModel";
 import loggerFactory from "../middlewares/WinstonLogger";
 
 const InvitedUserSchema = new mongoose.Schema(
@@ -69,7 +69,7 @@ function( next, docs) {
 }
 );
  */
-export default mongoose.model<InvitedUserModel & mongoose.Document>(
+export default mongoose.model<InvitedUser & mongoose.Document>(
     "InvitedUser",
     InvitedUserSchema
 );

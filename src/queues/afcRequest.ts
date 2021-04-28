@@ -20,7 +20,7 @@ import UserModel from "../domain/user/User";
 import {AFCProcess} from "../domain/AFCProcess";
 import FileService from "../services/FileService";
 
-class AfcRequestQueue {
+export class AfcRequestQueue {
     public queue: any;
     static servicename = "AFCRequestQueue";
 
@@ -68,32 +68,33 @@ class AfcRequestQueue {
         this.queue.add(_data, options);
     }
 
+public             async makeOCRRequest(_job: any, _done: any) {
+    const logger = loggerFactory(AfcRequestQueue.servicename, "makeOCRRequest");
+    try {
+        const afcProcess = new AFCProcess(_job.data.afcProcessData);
+        const file = new FileModel(_job.data.inputFile);
+
+                const fileData = await FileService.getFileDataByS3Key(file.container, file.fileKey);
+
+                    const response = await this.requestOCR(
+                        file,
+                        afcProcess,
+                        fileData,
+                    );
+                    if (response !== null) {
+                        afcProcess.changeStatusTo(
+                            AFCRequestStatus.OCR_REQUEST_ACCEPTED
+                        );
+                    }
+
+    } catch (error) {
+        logger.error("got error in afc request queue %o", error);
+    }
+    _done();
+};
 
     private process(): void {
-        const logger = loggerFactory(AfcRequestQueue.servicename, "process");
-        this.queue.process(async (_job: any, _done: any) => {
-            try {
-                const afcProcess = new AFCProcess(_job.data.afcProcessData);
-                const file = new FileModel(_job.data.inputFile);
-
-                        const fileData = await FileService.getFileDataByS3Key(file.container, file.fileKey);
-
-                            const response = await this.requestOCR(
-                                file,
-                                afcProcess,
-                                fileData,
-                            );
-                            if (response !== null) {
-                                afcProcess.changeStatusTo(
-                                    AFCRequestStatus.OCR_REQUEST_ACCEPTED
-                                );
-                            }
-
-            } catch (error) {
-                logger.error("got error in afc request queue %o", error);
-            }
-            _done();
-        });
+        this.queue.process(this.makeOCRRequest);
     }
 
     public async requestOCR(

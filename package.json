@@ -4,10 +4,13 @@
   "description": "An API server built to support the workflow and AI powered services for different accommodation",
   "author": "I-Stem",
   "main": "dist",
+  "typings": "dist/controllers/API/AFC.d.ts",
   "dependencies": {
     "@casl/ability": "^4.1.6",
     "@casl/mongoose": "^3.0.3",
     "@hapi/joi": "^17.1.1",
+    "@microsoft/api-documenter": "^7.13.3",
+    "@microsoft/api-extractor": "^7.14.0",
     "@types/pdfjs-dist": "^2.1.7",
     "aws-sdk": "^2.695.0",
     "bcrypt": "^5.0.0",
@@ -66,7 +69,7 @@
     "@babel/preset-typescript": "^7.10.1",
     "@types/bcrypt": "3.0.0",
     "@types/bull": "^3.14.0",
-    "@types/chai": "^4.2.12",
+    "@types/chai": "^4.2.15",
     "@types/compression": "0.0.36",
     "@types/connect-mongo": "^3.1.3",
     "@types/cors": "^2.8.4",
@@ -94,7 +97,7 @@
     "@typescript-eslint/parser": "^4.6.0",
     "awesome-typescript-loader": "^5.2.0",
     "babel-plugin-module-resolver": "^4.0.0",
-    "chai": "^4.2.0",
+    "chai": "^4.3.4",
     "concurrently": "^5.3.0",
     "eslint": "^7.12.1",
     "eslint-plugin-react": "^7.21.5",
@@ -107,6 +110,7 @@
     "nyc": "^15.1.0",
     "onchange": "^7.0.2",
     "serve": "^11.3.2",
+    "sinon": "^9.2.4",
     "source-map-support": "^0.5.19",
     "supertest": "^4.0.2",
     "testdouble": "^3.16.1",
@@ -125,7 +129,7 @@
     "start:dev": "npm run build && nodemon --trace-warnings -r dotenv/config --exec babel-node dist",
     "build:watch": "onchange 'src/**/*.ts' -- npm run build",
     "dev": "tsc --project ./tsconfig.json --watch & NODE_ENV=development nodemon --exec babel-node dist",
-    "test": "ts-mocha ./tsconfig.json --exit src/test/**/*.spec.ts --timeout 100000",
+    "test": "cross-env DOTENV_CONFIG_PATH=.env.test ts-mocha -r dotenv/config  ./tsconfig.json --exit src/test/**/*.spec.ts --timeout 100000",
     "test:runEnvironment": "ts-mocha ./tsconfig.json -r dotenv/config --bail src/**/*SetupTest.spec.ts",
     "test:unit": "ts-mocha ./tsconfig.json -r dotenv/config --bail src/**/*UnitTest.spec.ts",
     "view:coverage": "serve coverage/lcov-report",
@@ -135,14 +139,17 @@
     "eslint-fix": "eslint --fix --ext .js,.ts .",
     "seed": "tsc --project ./tsconfig.json && node seed/template.js",
     "seed:dev": "node seed.js",
-    "code-cov": "nyc cross-env TS_NODE_FILES=true mocha --exit --require ts-node/register  src/test/**/*.ts"
+    "code-cov": "nyc cross-env TS_NODE_FILES=true DOTENV_CONFIG_PATH=.env.test  mocha -r dotenv/config --exit --require ts-node/register  src/test/**/*.ts",
+    "generateAPIDoc": "api-extractor run --local --verbose"
   },
   "nyc": {
     "extension": [
       ".ts"
     ],
     "exclude": [
+      "**/*.spec.ts",
       "**/*.d.ts",
+      "**/interfaces/validators/*.ts",
       "**/models/*.ts",
       "**/test/**",
       "**/controllers/**",
@@ -150,13 +157,15 @@
       "**/routes/**",
       "**/seed/**",
       "**/.adminbro/**",
-      "**/coverage/**"
+      "**/coverage/**",
+      "**/docs/**"
     ],
     "require": [
       "ts-node/register"
     ],
     "reporter": [
-      "html"
+      "html",
+      "text"
     ],
     "sourceMap": true,
     "instrument": true,

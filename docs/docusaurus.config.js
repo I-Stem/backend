@@ -17,12 +17,7 @@ navbar: {
 title: "Accommodation Services Documentation",
 items : [{
 label: "API docs",
-to: "api/index"
-},
-{
-type: "doc",
-label: "Contributing Guidelines",
-docId: "contributing/index"
+to: "index"
 }
 ]
 },

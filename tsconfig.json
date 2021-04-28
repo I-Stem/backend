@@ -1,14 +1,14 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-"lib": ["ES6"],
+    "target": "ES6",
     "module": "commonjs",
 "moduleResolution": "node",
 "allowSyntheticDefaultImports": true,
 "esModuleInterop": true,
 "preserveSymlinks":true,
     "declaration": true,
-    "removeComments": true,
+    "declarationMap": true,
+//    "removeComments": true,
     "noImplicitAny": false,
     "noImplicitThis":false,
     "outDir": "dist/",

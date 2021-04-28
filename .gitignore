@@ -60,3 +60,5 @@ coverage/
 
 
 dist/
+
+.nyc_output/

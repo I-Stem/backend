@@ -97,7 +97,8 @@ export class EscalationModel implements EscalationProps {
                 "Escalating file with sourceFileId" + this.sourceFileId
             );
             const remediationProcessInstance = await new EscalationDbModel(this).save();
-            return new EscalationModel(remediationProcessInstance);
+            this.escalationId = remediationProcessInstance.id;
+            return this;
         } catch (error) {
             logger.error("error occurred while persisting escalation request");
         }
@@ -128,7 +129,7 @@ this.remediatedFile = remediatedFile;
             await this.updateReimediatedFile(new FileCoordinate(remediatedFile?.container || "", remediatedFile?.fileKey || "", remediatedFile?.fileId ));
 remediatedFile?.setIsRemediatedFile(true);
             if (this.remediatedFile) {
-                this.completePendingRequests();
+                await this.completePendingRequests();
                 await this.changeStatusTo(
                     EscalationStatus.RESOLVED
                 );
@@ -539,13 +540,13 @@ return null;
                 const afcRequest = await AfcModel.getAfcModelById(serviceRequestId);
                 await afcRequest?.changeStatusTo(AFCRequestStatus.RESOLVED_FILE_USED);
                 if(this.remediatedFile)
-                                afcRequest?.completeAFCRequestProcessing(this.remediatedFile);
+                                await afcRequest?.completeAFCRequestProcessing(this.remediatedFile);
             } else if (
                 this.escalationForService === AIServiceCategory.VC
             ) {
                 const vcRequest = await VcModel.getVCRequestById(serviceRequestId);
                 if(this.remediatedFile)
-vcRequest?.performSuccessfulRequestCompletionPostActions(VCRequestStatus.RESOLVED_FILE_USED, this.remediatedFile);
+await vcRequest?.performSuccessfulRequestCompletionPostActions(VCRequestStatus.RESOLVED_FILE_USED, this.remediatedFile);
             }
                     });
 

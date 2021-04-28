@@ -19,11 +19,8 @@ import {OrganizationModel} from "../organization";
 import {
     HandleAccessibilityRequests,
 } from "../organization/OrganizationConstants";
+import {VCLanguageModelType} from "./VCProcessConstants";
 
-export const enum VCLanguageModelType {
-    STANDARD = "STANDARD",
-    CUSTOM = "CUSTOM",
-}
 
 export class VCOutput {
     outputFormat: CaptionOutputFormat;
@@ -105,7 +102,7 @@ export class VCProcess {
         const logger = loggerFactory(VCProcess.serviceName, "persist");
         try {
             const vcProcessInstance = await new VCProcessDBModel(this).save();
-            this.processId = vcProcessInstance._id;
+            this.processId = vcProcessInstance.id;
             return this;
         } catch (error) {
             logger.error("error: %o", error);

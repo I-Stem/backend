@@ -5,7 +5,7 @@ import UserModel from "../user/User";
 import {ReviewEnum, ReviewRequestType, AdminReviewStatus} from "./AdminReviewConstants";
 import {OrganizationRequestedType} from "../organization/OrganizationConstants";
 
-class ServiceRoleRequest {
+export class ServiceRoleRequest {
     userId: string;
     role: ServiceRoleEnum;
     fullName: string;
@@ -23,7 +23,7 @@ class ServiceRoleRequest {
     }
 }
 
-class OrganizationRequest {
+export class OrganizationRequest {
     organizationName?: string;
     userName?: string;
     organizationType?: OrganizationRequestedType;
@@ -44,7 +44,7 @@ class OrganizationRequest {
     }
 }
 
-class DomainAccessRequest {
+export class DomainAccessRequest {
     organizationCode: string;
     domain: string;
     requestedBy?: string;
@@ -129,11 +129,15 @@ export class AdminReviewModel implements AdminReviewModelProps {
         logger.info(
             `Persisting request for admin review: ${JSON.stringify(this)}`
         );
-        await new AdminReviewDb(this).save((err: any) => {
-            if (err) {
-                logger.error(`Error persisting data, ${err}`);
+        try {
+        const result = await new AdminReviewDb(this).save();
+        this.id = result.id;
+        return this;
+    } catch(error) {
+                logger.error(`Error persisting data, ${error}`);
             }
-        });
+
+            return undefined;
     }
 
     /**

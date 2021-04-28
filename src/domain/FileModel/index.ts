@@ -103,19 +103,18 @@ this.isRemediated = props.isRemediated;
         this.fileKey = props.fileKey || "";
         }
 
-        public async persist() : Promise<boolean> {
+        public async persist() {
 const logger = loggerFactory(FileModel.serviceName, "persist");
 try {
 const file = await new FileDbModel(this)
 .save();
 this.fileId = file.id;
-return true;
-
+return this;
 } catch(error) {
     logger.error("couldn't save file information: %o", error);
 }
 
-return false;
+return undefined;
         }
 
         public async setFileLocation(fileKey:string) {
@@ -142,9 +141,11 @@ logger.error("error: %o", error);
             const logger = loggerFactory(FileModel.serviceName, "associateFileWithUser");
             logger.info(`associating user: ${userId} with file: ${this.name}`);
             try {
+                const currentUserContext = new UserContext(userId, processAssociation, organizationCode);
+                this.userContexts.push(currentUserContext);
             await FileDbModel.findByIdAndUpdate(this.fileId, {
                 $push: {
-                    userContexts: new UserContext(userId, processAssociation, organizationCode)
+                    userContexts: currentUserContext
                 }
             });
         }
@@ -179,13 +180,13 @@ logger.error("error: %o", error);
      logger.error('couldn\'t update the converted file information %o', error);
  }
      }
-*/
 
      public async updateVideoId(videoId: string) {
 await FileDbModel.findByIdAndUpdate(this.fileId, {
     externalVideoId: videoId
 }).lean();
      }
+*/
 
      public async setIsRemediatedFile(isRemediated:boolean) {
 this.isRemediated = isRemediated;
@@ -227,22 +228,6 @@ await FileDbModel.findByIdAndUpdate(this.fileId, {
         return FileDbModel.findOne({ _id: id }).lean();
     }
 
-    public static async getFileByExternalVideoId(videoId: string) {
-        const logger = loggerFactory(
-            FileModel.serviceName,
-            "getFileByExternalVideoId"
-        );
-        const file = await FileDbModel.findOne({
-            externalVideoId: videoId,
-        }).lean();
-        if (file !== null) {
-            return new FileModel(file);
-        } else {
-            logger.error("couldn't get file by video id");
-        }
-
-        return null;
-    }
 
     public static async getFileById(fileId: string) {
         const logger = loggerFactory(FileModel.serviceName, "getFileById");

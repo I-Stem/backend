@@ -1,10 +1,10 @@
 import UserModel from "../../domain/user/User";
 import db from "../dbHandler";
 import chai, { expect } from "chai";
-import { UserType, OAuthProvider } from "../../domain/user/UserConstants";
-import { UniversityRoles } from "../../domain/organization";
-import { ServiceRoleEnum } from "../../models/User";
+import { UserType, OAuthProvider, ServiceRoleEnum } from "../../domain/user/UserConstants";
 import { UserCreationContext } from "../../domain/user";
+import {UniversityRoles} from "../../domain/organization/OrganizationConstants"
+import { InvitationType } from "../../domain/InvitedUserModel/InvitedUserConstants";
 const should = chai.should();
 
 describe("Test for user model lifecycle", function () {
@@ -19,7 +19,7 @@ describe("Test for user model lifecycle", function () {
             });
             
     it("Should create a successful user", async function () {
-        await UserModel.registerUser({
+        const user = await UserModel.registerUser({
             email: "john@universe.world",
             fullname: "john hopkins",
             userType: UserType.I_STEM,
@@ -31,7 +31,7 @@ describe("Test for user model lifecycle", function () {
                 oauthProviderId: "10^42",
                 context: UserCreationContext.HACKATHON,
                 isContextualized: false
-        }, undefined, undefined);
+        }, undefined, undefined, undefined);
     });
 
 });

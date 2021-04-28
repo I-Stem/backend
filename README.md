@@ -5,6 +5,9 @@
 
 
 # Introduction
+
+   For an intro about who we are and what we aim to develop, go [here](https://i-stem.github.io).
+
 ## API for accommodation services developed by I-Stem
 
    This repo is backend for AI-powered I-Stem assistive technology solutions. Please click [here](https://github.com/I-Stem/frontend#introduction) to go to front end repo for this project which lists the current feature provided by this portal to its end-user.
@@ -16,6 +19,7 @@
 * [Global Requisites](#global-requisites)
 * [Project Setup](#project-setup)
 * [Getting Started](#getting-started)
+* [API Documentation](#api-documentation)
 
 
 
@@ -145,3 +149,6 @@ yarn start:dev
 * [Front-end repo for this](https://github.com/I-Stem/frontend)
 * [AI services used by this portal](https://github.com/I-Stem/science)
 
+# API documentation
+
+   Please have a look [here](https://i-stem.github.io/backend).

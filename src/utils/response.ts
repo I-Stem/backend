@@ -1,5 +1,4 @@
 import {Response} from 'express';
-import message from 'src/queues/message';
 import {IResponse} from '../interfaces/vendors/IResponse';
 
 export interface IResponseEntries {

@@ -1,6 +1,9 @@
 ---
 name: Bug report
 about: Create a report to help us improve
+title: Bug on <page>
+labels: bug
+assignees: ExplorerSunil
 
 ---
 

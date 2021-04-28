@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import {University} from "../domain/organization";
+import {OrganizationProps} from "../domain/organization";
 import {
     DomainAccess,
     EscalationsHandledBy,
@@ -90,7 +90,7 @@ UniversitySchema.virtual("domainAccessStatus").get(function () {
         .domainAccessStatusLog[this.domainAccessStatusLog.length - 1].status;
 });
 
-export default mongoose.model<University & mongoose.Document>(
+export default mongoose.model<OrganizationProps & mongoose.Document>(
     "University",
     UniversitySchema
 );

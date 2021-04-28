@@ -118,6 +118,20 @@ export class AfcModel implements AFCRequestProps {
         return request;
     }
 
+    public async persist() {
+        const logger = loggerFactory(AfcModel.serviceName, "persist");
+
+        try {
+            const result = await new AfcDbModel(this).save();
+this.afcRequestId= result.id;
+            return this;
+        } catch (error) {
+            logger.error("couldn't persist afc request data: %o", error);
+        }
+
+        return null;
+    }
+
     public static async averageResolutionTime(userId: string) {
         const logger = loggerFactory(
             AfcModel.serviceName,
