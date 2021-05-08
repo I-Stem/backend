@@ -76,7 +76,7 @@ public             async makeOCRRequest(_job: any, _done: any) {
 
                 const fileData = await FileService.getFileDataByS3Key(file.container, file.fileKey);
 
-                    const response = await this.requestOCR(
+                    const response = await AfcRequestQueue.requestOCR(
                         file,
                         afcProcess,
                         fileData,
@@ -97,7 +97,7 @@ public             async makeOCRRequest(_job: any, _done: any) {
         this.queue.process(this.makeOCRRequest);
     }
 
-    public async requestOCR(
+    public static async requestOCR(
         file: FileModel,
         afcProcess: AFCProcess,
         inputFileData: any

@@ -69,7 +69,7 @@ export class VcRequestQueue {
         const vcProcess = new VCProcess(_job.data.vcProcessData);
 const inputFile = new FileModel(_job.data.inputFile);
         try {
-const result: any = await this.requestVideoInsights(vcProcess, inputFile);
+const result: any = await VcRequestQueue.requestVideoInsights(vcProcess, inputFile);
 
 if (result === null) {
 vcProcess.changeStatusTo(VCRequestStatus.INDEXING_REQUEST_FAILED);
@@ -92,7 +92,7 @@ await vcProcess.updateVideoId(result.videoId);
         _done();
     }
 
-    private async requestVideoInsights(vcProcess: VCProcess, file: FileModel) {
+    public static async requestVideoInsights(vcProcess: VCProcess, file: FileModel) {
         const logger = loggerFactory(VcRequestQueue.servicename, 'requestVideoInsights');
         logger.info('requesting video indexing from ML repo');
         try {

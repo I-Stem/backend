@@ -82,7 +82,7 @@ userContexts.push(new UserContext(waitingRequest.user?.userId || "", FileProcess
 for(const [insightType, outputFormats] of videoInsights.entries()) {
 for(const outputFormat of outputFormats) {
 const fileKey = `${inputFile?.userContexts[0].organizationCode}/${inputFile?.fileId}/${vcProcess.insightAPIVersion}/${vcProcess.languageModelType === VCLanguageModelType.STANDARD ? VCLanguageModelType.STANDARD : vcProcess.languageModelId}/${VCProcess.getOutputZipFileName(insightType, outputFormat)}`;
-const result: any = await this.requestVideoInsightsByRequestType(vcProcess, inputFile, insightType, outputFormat, inputFile.container, fileKey);
+const result: any = await VcResponseQueue.requestVideoInsightsByRequestType(vcProcess, inputFile, insightType, outputFormat, inputFile.container, fileKey);
 if(result !== null) {
 await vcProcess.changeStatusTo(VCRequestStatus.COMPLETED);
 
@@ -127,7 +127,7 @@ throw new Error("inputFile missing with id: "+ vcProcess.inputFileId);
     }
     
 
-    private async requestVideoInsightsByRequestType(vcProcess: VCProcess, inputFile:FileModel, insightType: VideoExtractionType, outputFormat: CaptionOutputFormat, container:string, fileKey:string) {
+   public static   async requestVideoInsightsByRequestType(vcProcess: VCProcess, inputFile:FileModel, insightType: VideoExtractionType, outputFormat: CaptionOutputFormat, container:string, fileKey:string) {
         const logger = loggerFactory(VcResponseQueue.servicename, 'requestVideoInsightsByRequestType');
         logger.info('requesting video insights for id: ' + vcProcess.externalVideoId);
 

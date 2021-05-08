@@ -84,7 +84,7 @@ logger.info("starting format conversion requests");
                     logger.info("requesting for format: " + outputFormat);
                     const inputFile = await FileModel.getFileById(afcProcess.inputFileId);
                     const fileKey = `${inputFile?.userContexts[0].organizationCode}/${inputFile?.fileId}/${afcProcess.ocrType}/${afcProcess.ocrVersion}/afcOutput.${outputFormat.toLowerCase()}`;
-                const formattingAPIResult = await this.requestFormatting(
+                const formattingAPIResult = await AfcResponseQueue.requestFormatting(
                     afcProcess,
                     outputFormat,
                     process.env.AWS_BUCKET_NAME || "",
@@ -174,7 +174,7 @@ afcProcess.finishPendingUserRequests();
     }
     
 
-    public async requestFormatting(
+    public static async requestFormatting(
         afcProcess: AFCProcess,
 outputFormat: AFCRequestOutputFormat,
 container:string,
@@ -214,7 +214,7 @@ fileKey: string,
         }
     }
 
-    private async handleFormattingAPIError(
+    private static async handleFormattingAPIError(
         afcProcess: AFCProcess,
         formattingAPIResult: any,
         serviceType: string
