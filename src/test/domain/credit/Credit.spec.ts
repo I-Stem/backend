@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import Credits from "../../../domain/credit";
+import Credits from "../../../domain/Credit";
 
 describe("test Credit API", async function () {
 
