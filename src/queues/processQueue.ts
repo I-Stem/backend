@@ -8,6 +8,7 @@ import loggerFactory from "../middlewares/WinstonLogger";
 import {AfcModel} from '../domain/AfcModel';
 import {VcModel} from "../domain/VcModel";
 import {AFCProcess} from "../domain/AFCProcess";
+import { VCProcess } from "../domain/VCProcess";
 
 /**
  *  AFC Process Queue for finding the status of every afc request.
@@ -75,7 +76,7 @@ import {AFCProcess} from "../domain/AFCProcess";
             ).toISOString();
             const now = date.toISOString();
             AFCProcess.afcCronHandler(hourAgo, now);
-            VcModel.vcCronHandler(hourAgo, now);
+            VCProcess.vcCronHandler(hourAgo, now);
             _done();
         });
     }

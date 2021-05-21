@@ -8,7 +8,7 @@ import { Application } from 'express';
 import CORS from './CORS';
 import Http from './Http';
 import Statics from './Statics';
-import CsrfToken from './CsrfToken';
+//import CsrfToken from './CsrfToken';
 import StatusMonitor from './StatusMonitor';
 import Auth from './Auth';
 

@@ -10,5 +10,6 @@ email: "sansa@stark.com",
 userType: UserType.UNIVERSITY,
 role: UniversityRoles.STUDENT,
 university: OrganizationModelStubs.winterfellUniversity.code,
+verifyToken: "token"
     })
 }

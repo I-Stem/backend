@@ -1,4 +1,6 @@
 import { expect } from "chai";
+import { Readable, Stream } from "stream";
+import { fileURLToPath } from "url";
 import { DocType } from "../../domain/AfcModel/AFCConstants";
 import FileModel from "../../domain/FileModel";
 import { FileProcessAssociations } from "../../domain/FileModel/FileConstants";
@@ -129,4 +131,12 @@ it("should determine access rights for org users", async function() {
         await db.cleanup();
         await db.closeConnection();
     });
+
+    it("should successfully read the filedata", async function() {
+        const readable = new Readable();
+        readable.push("hello there");
+        readable.push(null);
+        const result = await documentFile.setFileMetadata(readable, "application/string");
+        expect(result.toString()).to.equal("hello there");
+    })
 });

@@ -16,23 +16,6 @@ class MessageQueue {
     public queue: any;
     static servicename = 'MessageQueue';
 
-    private reg: any = {
-        fullname: /__name__/g, // receivers email
-        email: /__email__/g,
-        contact: /__contact__/g,
-        'approver.date': /__date__/g,
-        'approver.time': /__time__/g,
-        requestedAccomodations: /__accommodation__/g,
-        accommodations: /__accommodationApproved__/g,
-        roleName: /__role_name__/g,
-        triggeredByName: /__triggered_by_name__/g,
-        // invitationLink: /__invitation_link__/g,
-        // loginLink: /__login_link__/g,
-        message: /__message__/g,
-        documentName: /__document_name__/g,
-        link: /__link__/g
-    };
-
     constructor() {
         const methodname = 'constructor';
         const logger = loggerFactory(MessageQueue.servicename, methodname);
@@ -66,16 +49,7 @@ class MessageQueue {
             });
         this.process();
     }
-    private mapTemplate(templateBody: any, obj: any) {
 
-        for (const index in this.reg) {
-            templateBody = templateBody.replace(
-                this.reg[index],
-                obj[index] || ''
-            );
-        }
-        return templateBody;
-    }
 
     public dispatch(_data: object): void {
         const logger = loggerFactory(MessageQueue.servicename, 'dispatch');
@@ -102,49 +76,9 @@ return _done();
                 return _done();
             }
 
-            let promises: any = [
-                Template.findOne({ type: _job.data.type }),
-                User.findById(_job.data.receiverId)
-            ];
-            if (_job.data.triggeredBy) {
-                promises.push(User.findById(_job.data.triggeredBy));
-            }
-            return Promise.all(promises)
-                .then(([template, user, triggeredBy]: any) => {
-                    logger.debug(template, user, triggeredBy);
-                    _job.data = { ...user?.toJSON(), ..._job.data };
-                    _job.data['triggeredByName'] = triggeredBy?.fullname;
-                    let mesgData: any = {
-                        triggeredBy: _job.data.triggeredBy,
-                        receiverId: _job.data.receiverId,
-                        body: this.mapTemplate(template?.body, _job.data),
-                        subject: this.mapTemplate(template?.subject, _job.data),
-                        text: this.mapTemplate(template?.text, _job.data),
-                        link: this.mapTemplate(template?.link, _job.data),
-                        label: this.mapTemplate(template?.name, _job.data),
-                        status: 1,
-                        templateId: template?.id
-                    };
-                    logger.info(mesgData);
-                    return new Message(mesgData)
-                        .save()
-                        .then((mesg) => {
-                            if (template?.isEmail) {
-                                mesgData['id'] = mesg.id;
-                                mesgData['to'] = user?.email;
-                                EmailService.sendMail(mesgData);
-                            }
-                            _done();
-                        })
-                        .catch((error: Error) => {
-                            logger.error(error.message);
-                            _done();
-                        });
-                })
-                .catch((error: Error) => {
-                    logger.error(error.message);
-                });
+                
         });
+
     }
 }
 

@@ -78,6 +78,10 @@ expect(results.length).to.be.equal(2);
         })
     });
 
+    it("should generate student report for staff", async function() {
+        await OrganizationModel.emailStudentDataForUniversityAsCsv(winterfell.code, john.userId);
+    });
+
     after(async () => {
         await db.cleanup();
         await db.closeConnection();

@@ -27,15 +27,22 @@ const organization = OrganizationModelStubs.winterfellUniversity;
             },
         ], 
      InvitationType.FIRST_USER);
+
     });
 
     it("should get user from db", async function() {
+        await InvitedUserModel.persistInvitedUser([
+            {
+                ...invitedUser
+            },
+        ], 
+     InvitationType.ORGANIZATION);
         const result = await InvitedUserModel.getInvitedUserByEmail(invitedUser.email);
         expect(result.fullName).to.be.equal(invitedUser.fullName);
     });
 
     it("should give a valid user value true", async function() {
-        const result = await InvitedUserModel.checkInvitedUser(invitedUser.email, "");
+        const result = await InvitedUserModel.checkInvitedUser(invitedUser.email, "token");
         expect(result).to.be.equal(true);
     });
 

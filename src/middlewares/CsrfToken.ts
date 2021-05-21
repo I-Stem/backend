@@ -9,7 +9,7 @@ import * as lusca from 'lusca';
 import { Request, Response, NextFunction } from 'express';
 import loggerFactory from '../middlewares/WinstonLogger';
 import Locals from '../providers/Locals';
-
+/*
 class CsrfToken {
     static servicename = 'CsrfToken';
 
@@ -53,3 +53,4 @@ class CsrfToken {
 }
 
 export default CsrfToken;
+*/

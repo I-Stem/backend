@@ -8,7 +8,6 @@
 "preserveSymlinks":true,
     "declaration": true,
     "declarationMap": true,
-//    "removeComments": true,
     "noImplicitAny": false,
     "noImplicitThis":false,
     "outDir": "dist/",

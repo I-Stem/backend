@@ -26,7 +26,7 @@ fileKey: {type: String},
 fileId: {type: String}
     }
     }],
-    expiryTime: {type: Date},
+    expiryTime: {type: Date, index: true},
     status: {
         type: String,
         enum: [

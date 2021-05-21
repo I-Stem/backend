@@ -12,6 +12,7 @@ export const EscalationModelStubs = {
         escalationForService: AIServiceCategory.AFC,
         escalationForResult: AFCRequestOutputFormat.HTML,
         sourceFileId: "defined at runtime",
-        serviceRequestId: "defined at runtime"
+        serviceRequestId: "defined at runtime",
+        escalatorOrganization: "amazing"
     })
 }

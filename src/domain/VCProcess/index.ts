@@ -94,8 +94,8 @@ export class VCProcess {
         this.outputFiles = props.outputFiles || [];
 
         this.expiryTime = props.expiryTime;
-        this.status = props.status;
-        this.statusLog = props.statusLog;
+        this.status = props.status || VCRequestStatus.INITIATED;
+        this.statusLog = props.statusLog || [new VCRequestLifecycleEvent(VCRequestStatus.INITIATED)];
     }
 
     public async persist() {
@@ -506,4 +506,95 @@ export class VCProcess {
             return `${insightType}.${captionOutputFormat}`;
         }
     }
+
+    public static async vcCronHandler(
+        expiryTimeGTE: string,
+        expiryTimeLTE: string
+    ) {
+        const logger = loggerFactory(VCProcess.serviceName, "vcCronHandler");
+
+        try {
+            const expiringProcesses = await VCProcessDBModel.find({
+                expiryTime: {
+                    $gte: new Date(expiryTimeGTE),
+                    $lte: new Date(expiryTimeLTE),
+                },
+            }).lean();
+
+            const impendingFailureStatus = [
+                VCRequestStatus.INITIATED,
+                VCRequestStatus.INDEXING_REQUESTED,
+                VCRequestStatus.INDEXING_SKIPPED,
+                VCRequestStatus.CALLBACK_RECEIVED,
+                VCRequestStatus.INSIGHT_REQUESTED,
+            ];
+
+            logger.info("expiring processes: %o", expiringProcesses);
+            const failedProcessesData = expiringProcesses.map(
+                async (vcProcess) => {
+                    const vcProcessDetails = new VCProcess(vcProcess);
+                    const hasImpendingFailureStatus = impendingFailureStatus.some(
+                        (vcStatus) => vcStatus === vcProcessDetails?.status
+                    );
+                    if (hasImpendingFailureStatus) {
+                        return vcProcessDetails;
+                    }
+
+                    return null;
+                }
+            );
+            const results = (await Promise.all(failedProcessesData)).filter(
+                (val) => val !== null
+            );
+
+            if (results.length <= 0) {
+                logger.info(
+                    `No waiting AFC Request found during cron sweep for interval ${expiryTimeGTE} and ${expiryTimeLTE}`
+                );
+            } else {
+                logger.info("notifying I-Stem for vc cron failures");
+
+                const failedProcessDetails: any[] = [];
+
+                const res = results.map(async (vcProcess:VCProcess) => {
+                    const processRequests = await vcProcess?.notifyWaitingUsersAboutFailure(
+                        VCRequestStatus.INDEXING_REQUEST_FAILED
+                    );
+
+                    vcProcess?.changeStatusTo(VCRequestStatus.INDEXING_REQUEST_FAILED);
+                    const usersAffected: any[] = [];
+                    processRequests?.forEach((data) => {
+                        usersAffected.push({
+                            userName: data.user?.fullname,
+                            userEmail: data.user?.email,
+                            documentName: data.vcRequest?.documentName,
+                            organizationCode: data.vcRequest?.organizationCode,
+                        });
+                    });
+                    logger.info("got failed processes as: %o", usersAffected);
+                    failedProcessDetails.push({
+                        inputFileHash: vcProcess?.inputFileHash || "",
+                        inputFileLink: (
+                            await FileModel.getFileById(
+                                vcProcess?.inputFileId || ""
+                            )
+                        )?.inputURL,
+                                                indexingAPIVersion: vcProcess?.insightAPIVersion,
+                        usersAffected: usersAffected,
+                    });
+                });
+
+                await Promise.all(res);
+                VCProcess.notifyIStemTeamAboutVCProcessFailure(
+                    ExceptionMessageTemplates.getVCFailureMessage({
+                        data: failedProcessDetails,
+                        timeInterval: [expiryTimeGTE, expiryTimeLTE],
+                    })
+                );
+            }
+        } catch (error) {
+            logger.error("Error occured in filtering VC processes: %o", error);
+        }
+    }
+
 }

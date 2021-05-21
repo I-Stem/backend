@@ -1,20 +1,21 @@
-import db from "../dbHandler";
+import db from "../../dbHandler";
 import chai, { expect } from "chai";
 import Sinon from "sinon";
-import {VCProcess} from "../../domain/VCProcess";
-import {VCProcessStubs} from "../mocks/domain/VCProcessStubs";
-import FileModel from "../../domain/FileModel";
-import { FileModelStubs } from "../mocks/domain/FileModelStubs";
-import {UserModelStubs} from "../mocks/domain/UserModelStubs";
-import {VCModelStubs} from "../mocks/domain/VCModelStubs";
-import FileService from "../../services/FileService";
-import {VcRequestQueue} from "../../queues/vcRequest";
-import {VcResponseQueue} from "../../queues/VcResponse";
+import {VCProcess} from "../../../domain/VCProcess";
+import {VCProcessStubs} from "../../mocks/domain/VCProcessStubs";
+import FileModel from "../../../domain/FileModel";
+import { FileModelStubs } from "../../mocks/domain/FileModelStubs";
+import {UserModelStubs} from "../../mocks/domain/UserModelStubs";
+import {VCModelStubs} from "../../mocks/domain/VCModelStubs";
+import FileService from "../../../services/FileService";
+import {VcRequestQueue} from "../../../queues/vcRequest";
+import {VcResponseQueue} from "../../../queues/VcResponse";
+import { CaptionOutputFormat, VCRequestStatus, VideoExtractionType } from "../../../domain/VcModel/VCConstants";
 
 describe("Test for VCProcess model lifecycle", function () {
 let inputFile: FileModel = FileModelStubs.GOT;
 const fileOwner = UserModelStubs.JohnSnow;
-const vcProcess = VCProcessStubs.vcProcess;
+let vcProcess = new VCProcess({...VCProcessStubs.vcProcess});
 const vcRequest = VCModelStubs.vcRequest;
 
     before(async function() {
@@ -35,15 +36,15 @@ inputFile.userContexts[0].userId = fileOwner.userId;
             });
             
     it("Should create and persist a successful VC process", async function () {
-await vcProcess.persist();
+vcProcess = await VCProcess.findOrCreateVCProcess(vcProcess);
 vcProcess.processId.toString().length.should.greaterThan(20);
     });
 
 it("Must add an vc request in waiting queue", function() {
+    vcProcess.insightWaitingQueue.length.should.be.equal(0);
 vcProcess.addVCRequest(vcRequest.vcRequestId);
 vcProcess.insightWaitingQueue.length.should.be.equal(1);
-vcProcess.clearWaitingQueue();
-vcProcess.insightWaitingQueue.length.should.be.equal(0);
+return vcProcess.clearWaitingQueue();
 });
 
 it("must call vcRequest queue for video insights", async function () {
@@ -72,4 +73,25 @@ expect(vcResponseQueueDispatchStub.callCount).to.equal(1);
 vcResponseQueueDispatchStub.restore();
 });
 
+it("should test get vc  processes", async function() {
+    const process1 = await VCProcess.getVCProcessById(vcProcess.processId);
+    expect(process1).to.be.not.null;
+
+    const process2 = await VCProcess.getVCProcessByExternalVideoId(vcProcess.externalVideoId);
+    expect(process2).to.be.not.null;
+
+    await process2.updateVideoId("not it");
+    await process2.updateVideoInsightResult(VideoExtractionType.CAPTION, CaptionOutputFormat.SRT, inputFile);
+    await process2.addVCRequest(vcRequest.vcRequestId);
+    await process2.completeWaitingRequests();
+});
+
+it("should get metadata", async function() {
+    const out = VCProcess.getExpiryTime(3600);
+    expect(out.getTime()).to.be.greaterThan(new Date().getTime());
+});
+
+it("should test notification flow", async function() {
+await VCProcess.notifyErrorInVCProcessFlow(inputFile, "nothing", "unknown", "...", "undefined", VCRequestStatus.INSIGHT_FAILED);
+});
 });

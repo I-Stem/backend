@@ -374,7 +374,7 @@ message = "Audio/Video accessibility of file: " + this.documentName;
         ).getTime();
         await VcModel.setExpiryTime(videoLength, requestId, creationTime);
     }
-    */
+
 
     public static vcCronHandler(
         expiryTimeGTE: string,
@@ -425,6 +425,7 @@ message = "Audio/Video accessibility of file: " + this.documentName;
                 }
             });
     }
+*/
 
     public static async updateEscalatedVcRequestWithRemediatedFile(
         vcId: string,

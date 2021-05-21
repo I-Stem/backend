@@ -321,10 +321,10 @@ this.userId = result.id;
         if (this.isContextualized !== true) this.setIsContextualized(true);
         return contextPath;
     }
-    public deductCredits(amount: number, reason: string): void {
+    public async deductCredits(amount: number, reason: string) {
         const methodname = "deductCredits";
         const logger = loggerFactory(UserModel.servicename, methodname);
-        LedgerModel.createDebitTransaction(this.userId, amount, reason);
+        await LedgerModel.createDebitTransaction(this.userId, amount, reason);
     }
 
     public static async updateAccessRequestStatus(

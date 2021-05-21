@@ -11,7 +11,6 @@ import { AFCRequestStatus, DocType } from "../AfcModel/AFCConstants";
 import UserModel from "../user/User";
 import {UserType, UserRoleEnum} from "../user/UserConstants";
 import {UniversityRoles} from "../organization/OrganizationConstants";
-import { saveOCRjson } from "../../utils/file";
 import {FileProcessAssociations} from "./FileConstants";
 import {Stream, Readable} from "stream";
 import * as pdfJS from "pdfjs-dist/es5/build/pdf";

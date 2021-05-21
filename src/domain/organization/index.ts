@@ -1,5 +1,5 @@
 import { createObjectCsvStringifier } from "csv-writer";
-import { saveStudentsReportCSV } from "../../utils/file";
+import { onFileSaveToS3} from "../../utils/file";
 import ServiceRequestTemplates from "../../MessageTemplates/ServiceRequestTemplates";
 import {AdminReviewModel} from "../AdminReviewModel";
 import {ReviewEnum, ReviewRequestType} from "../AdminReviewModel/AdminReviewConstants";
@@ -509,18 +509,24 @@ export class OrganizationModel {
                 escalatedRequests,
             });
         }
-        const upload_url = await saveStudentsReportCSV(
+
+        const user = await UserModel.getUserById(userId);
+/*
+//todo: change the logic as per new file storage nomenclature
+        //store to blob storage
+        const upload_url = await onFileSaveToS3(
             csvWriter.getHeaderString() +
                 csvWriter.stringifyRecords(studentsRecords),
-            `university/${universityCode}`,
-            "Request-Metrics-Report.csv"
+            process.env.AWS_BUCKET_NAME,
+            `${user.organizationCode}/`
+            "text/csv"
         );
-        const user = await UserModel.getUserById(userId);
-        if (user && upload_url) {
+        */
+        if (user ) {
             EmailService.sendEmailToUser(
                 user,
                 ReportTemplate.getGenerateReportForMetricsMessage({
-                    url: upload_url,
+                    url: "/to/do/item",
                     user,
                 })
             );

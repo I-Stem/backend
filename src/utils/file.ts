@@ -16,14 +16,14 @@ let s3client = pkgcloud.storage.createClient({
 });
 const fileName = "fileUtils";
 
-const s3 = new S3({
+export const s3 = new S3({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     region: process.env.AWS_REGION,
 });
 
 
-
+/*
 const uploadFileToS3Bucket = (hash, filename, file, contentType: string) => {
     const logger = loggerFactory(fileName, "uploadFileToS3Bucket");
     logger.info("Uploading file to S3 bucket.......");
@@ -47,22 +47,6 @@ const uploadFileToS3Bucket = (hash, filename, file, contentType: string) => {
     return upload.promise();
 };
 
-export async function saveOCRjson(file: any, hash: string, filename: string) {
-    const logger = loggerFactory(fileName, "saveOCRjson");
-    try {
-        const upload = await uploadFileToS3Bucket(
-            hash,
-            filename,
-            file,
-            "application/json"
-        );
-        logger.info(`S3 upload completed, ${upload.Location}`);
-        return upload.Location;
-    } catch (err) {
-        logger.info(`error during file upload ${err}`);
-    }
-}
-
 export async function saveStudentsReportCSV(
     file: any,
     hash: string,
@@ -82,6 +66,7 @@ export async function saveStudentsReportCSV(
         logger.info(`error during file upload ${err}`);
     }
 }
+*/
 
 export function onFileSaveToS3(
     file: any,

@@ -8,7 +8,7 @@ import {
     DocType,
 } from "../AfcModel/AFCConstants";
 import AFCProcessDBModel from "../../models/AFCProcess";
-import { onFileSaveToS3, saveOCRjson } from "../../utils/file";
+import { onFileSaveToS3} from "../../utils/file";
 import EmailService from "../../services/EmailService";
 import ExceptionMessageTemplates from "../../MessageTemplates/ExceptionTemplates";
 import {
@@ -220,7 +220,7 @@ export class AFCProcess {
             "clearWaitingQueue"
         );
         logger.info("clearing the waiting queue");
-        this.ocrWaitingQueue.splice(0, this.ocrWaitingQueue.length);
+        this.ocrWaitingQueue = [];
         await AFCProcessDBModel.findByIdAndUpdate(this.processId, {
             ocrWaitingQueue: [],
         }).exec();
@@ -315,14 +315,15 @@ export class AFCProcess {
                     `No failed AFC Request found during cron sweep for interval ${expiryTimeGTE} and ${expiryTimeLTE}`
                 );
             } else {
-                logger.info("notifying I-Stem for failures");
+                logger.info("notifying I-Stem for AFC cron failures");
 
                 const failedProcessDetails: any[] = [];
 
-                results.forEach(async (afcProcess:any) => {
+                const res = results.map(async (afcProcess:AFCProcess) => {
                     const processRequests = await afcProcess?.notifyWaitingUsersAboutFailure(
                         AFCRequestStatus.OCR_FAILED
                     );
+
                     afcProcess?.changeStatusTo(AFCRequestStatus.OCR_FAILED);
                     const usersAffected: any[] = [];
                     processRequests?.forEach((data) => {
@@ -345,8 +346,11 @@ export class AFCProcess {
                         ocRVersion: afcProcess?.ocrVersion,
                         usersAffected: usersAffected,
                     });
+
+                    await afcProcess.clearWaitingQueue();
                 });
 
+                await Promise.all(res);
                 AFCProcess.notifyIStemTeamAboutAFCProcessFailure(
                     ExceptionMessageTemplates.getAFCFailureMessage({
                         data: failedProcessDetails,
