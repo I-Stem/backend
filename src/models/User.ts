@@ -11,6 +11,7 @@ import * as mongoose from "mongoose";
 import * as crypto from "crypto";
 import loggerFactory from "../middlewares/WinstonLogger";
 import { OAuthProvider, OtherUserRoles, UserType, UserRoleEnum, ServiceRoleEnum, ColorThemes, FontThemes, UserStatusEnum } from "../domain/user/UserConstants";
+import {UserModelProps} from "../domain/user/User";
 import { UniversityRoles } from "../domain/organization/OrganizationConstants";
 
 const mongooseFuzzySearching = require("mongoose-fuzzy-searching");
@@ -35,7 +36,7 @@ export interface IUserModel extends IUser, mongoose.Document {
 
 
 // Define the User Schema
-export const UserSchema = new mongoose.Schema(
+export const UserSchema = new mongoose.Schema<UserModelProps & IUserModel>(
     {
         email: { type: String, unique: true, lowercase: true },
         password: { type: String },

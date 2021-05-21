@@ -6,7 +6,7 @@ import {EscalationModelStubs} from "../mocks/domain/EscalationModelStubs";
 import {AFCProcessStubs} from "../mocks/domain/AFCProcessStubs";
 import {VCProcessStubs} from "../mocks/domain/VCProcessStubs";
 import {AfcModelStubs} from "../mocks/domain/AfcModelStubs";
-import {VCModelStubs} from "../mocks/domain/VcModelStubs";
+import {VCModelStubs} from "../mocks/domain/VCModelStubs";
 import {EscalationModel} from "../../domain/EscalationModel";
 import { HandleAccessibilityRequests } from '../../domain/organization/OrganizationConstants';
 import { AIServiceCategory, EscalationStatus } from '../../domain/EscalationModel/EscalationConstants';
