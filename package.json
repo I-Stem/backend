@@ -129,7 +129,7 @@
     "start:dev": "npm run build && nodemon --trace-warnings -r dotenv/config --exec babel-node dist",
     "build:watch": "onchange 'src/**/*.ts' -- npm run build",
     "dev": "tsc --project ./tsconfig.json --watch & NODE_ENV=development nodemon --exec babel-node dist",
-    "test": "cross-env DOTENV_CONFIG_PATH=.env.test ts-mocha -r dotenv/config  ./tsconfig.json --exit src/test/**/*.spec.ts --timeout 100000",
+    "test": "cross-env DOTENV_CONFIG_PATH=.env.test ts-mocha -r dotenv/config  ./tsconfig.json --exit src/test --extension spec.ts --recursive --timeout 100000",
     "test:runEnvironment": "ts-mocha ./tsconfig.json -r dotenv/config --bail src/**/*SetupTest.spec.ts",
     "test:unit": "ts-mocha ./tsconfig.json -r dotenv/config --bail src/**/*UnitTest.spec.ts",
     "view:coverage": "serve coverage/lcov-report",
