@@ -11,7 +11,7 @@ import * as mongoose from "mongoose";
 import * as crypto from "crypto";
 import loggerFactory from "../middlewares/WinstonLogger";
 import { OAuthProvider, OtherUserRoles, UserType, UserRoleEnum, ServiceRoleEnum, ColorThemes, FontThemes, UserStatusEnum } from "../domain/user/UserConstants";
-import {UserModelProps} from "../domain/user/User";
+import UserModel, {UserModelProps} from "../domain/user/User";
 import { UniversityRoles } from "../domain/organization/OrganizationConstants";
 
 const mongooseFuzzySearching = require("mongoose-fuzzy-searching");
@@ -159,16 +159,6 @@ UserSchema.pre<IUserModel>("save", async function (_next) {
 });
 
 // Custom Methods
-// Get user's full billing address
-UserSchema.methods.billingAddress = function (): string {
-    const methodname = "billingAddress";
-    const logger = loggerFactory(servicename, methodname);
-
-    const fulladdress = `${this.fullname.trim()} ${this.geolocation.trim()}`;
-    logger.info(`Billing address: ${fulladdress}`);
-
-    return fulladdress;
-};
 
 // create the user's password with the request password
 UserSchema.methods.generatePassword = function (
