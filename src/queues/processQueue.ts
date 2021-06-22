@@ -79,8 +79,8 @@ import { VCProcess } from "../domain/VCProcess";
             date.getTime() - 1000 * 60 * 60
         ).toISOString();
         const now = date.toISOString();
-        AFCProcess.afcCronHandler(hourAgo, now);
-        VCProcess.vcCronHandler(hourAgo, now);
+        await AFCProcess.afcCronHandler(hourAgo, now);
+        await VCProcess.vcCronHandler(hourAgo, now);
         _done();
     }
     

@@ -20,13 +20,12 @@ describe("Must verify deletion of unverified users", async function() {
                 });
                 
     
-    it("must call deletion of unverified email users", async function() {
-        await verifyQueue.deleteOldUnverifiedUsers({
+    it("must call deletion of unverified email users", function(done) {
+        verifyQueue.deleteOldUnverifiedUsers({
             data: {
             }
-        }, () => {
-            console.log("deleted data");
-        });
+        },
+        done);
   
 
 
