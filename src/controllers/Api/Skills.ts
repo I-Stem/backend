@@ -35,7 +35,7 @@ class SkillsController {
         const logger = loggerFactory(SkillsController.ServiceName, 'addMentorship');
         logger.info('Request Received: %o', req.body);
         const skillsInstance = plainToClass(SkillsModel, req.body);
-        skillsInstance.persistSkills(res.locals.user.id);
+        skillsInstance.persistSkills();
         return res.status(HttpStatus.OK).json(
             response[HttpStatus.OK]({
                 message: `skills successfully stored`,

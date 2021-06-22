@@ -5,14 +5,14 @@ class DisabilitiesModel {
     static ServiceName = 'DisabilitiesModel';
     name: string = '';
 
-    persistDisabilities(currUserId: string) {
+    constructor(name: string) {
+        this.name = name;
+    }
+
+    async persistDisabilities() {
         const logger = loggerFactory(DisabilitiesModel.ServiceName, 'persistDisabilities');
-        new DisabilitiesDbModel(this)
-    .save((err: any) => {
-        if (err) {
-        logger.error(err);
-        }
-    });
+        await new DisabilitiesDbModel(this)
+    .save();
     }
 }
 

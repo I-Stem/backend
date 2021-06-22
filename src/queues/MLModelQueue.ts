@@ -58,55 +58,58 @@ class MLModelQueue {
     }
 
     private process(): void  {
-        const logger = loggerFactory(MLModelQueue.servicename, 'process');
-        this.queue.process( async (_job: any, _done: any) => {
-            logger.debug( _job.data);
-
-            try {
-            let model = await MLModelModel.getModelById(_job.data.triggeringCaseId);
-            let options = {
-                url: `${process.env.SERVICE_API_HOST}/api/v1/customspeech`,
-                method: 'POST',
-                body: {
-                    name: model?.name,
-                    fileName: model?.name,
-                    fileUrl: _job.data.outputURL
-                },
-                json: true
-            };
-            logger.info('Sending request to model training service');
-
-            const response = await request(options);
-
-            if (response.error) {
-                emailService.sendInternalDiagnosticEmail(
-                    ExceptionMessageTemplates.getCustomSpeechTrainingFailingMessage({
-                        code: 502,
-                        reason: 'custom speech api failing',
-                        stackTrace: response.message,
-                        correlationId: 'to be implemented',
-                        userId: _job.data.userId,
-                        modelName: model?.name,
-                        dataFileId: _job.data.inputFileId,
-                        afcRequestId: _job.data.afcRequestId,
-                        outputURL: _job.data.outputURL
-                    }));
-            } else {
-                model?.updateTrainedModelId(response.languageModelId);
-                const user = await UserModel.getUserById(model?.createdBy || '');
-                if (model !== null && user !== null) {
-                    emailService.sendEmailToUser(user, ServiceRequestTemplates.getModelTrainingCompleteMessage({
-                        userName: user.fullname,
-                        modelName: model?.name || ''
-                    }));
-                }
-            }
-        } catch (error) {
-            logger.error('encountered error in training model: %o', error);
-        }
-            _done();
-        });
+        this.queue.process(this.requestCustomModelTraining);
     }
+
+    public              async requestCustomModelTraining(_job: any, _done: any) {
+        const logger = loggerFactory(MLModelQueue.servicename, 'process');
+        logger.debug( _job.data);
+
+        try {
+        let model = await MLModelModel.getModelById(_job.data.triggeringCaseId);
+        let options = {
+            url: `${process.env.SERVICE_API_HOST}/api/v1/customspeech`,
+            method: 'POST',
+            body: {
+                name: model?.name,
+                fileName: model?.name,
+                fileUrl: _job.data.outputURL
+            },
+            json: true
+        };
+        logger.info('Sending request to model training service');
+
+        const response = await request(options);
+
+        if (response.error) {
+            emailService.sendInternalDiagnosticEmail(
+                ExceptionMessageTemplates.getCustomSpeechTrainingFailingMessage({
+                    code: 502,
+                    reason: 'custom speech api failing',
+                    stackTrace: response.message,
+                    correlationId: 'to be implemented',
+                    userId: _job.data.userId,
+                    modelName: model?.name,
+                    dataFileId: _job.data.inputFileId,
+                    afcRequestId: _job.data.afcRequestId,
+                    outputURL: _job.data.outputURL
+                }));
+        } else {
+            model?.updateTrainedModelId(response.languageModelId);
+            const user = await UserModel.getUserById(model?.createdBy || '');
+            if (model !== null && user !== null) {
+                emailService.sendEmailToUser(user, ServiceRequestTemplates.getModelTrainingCompleteMessage({
+                    userName: user.fullname,
+                    modelName: model?.name || ''
+                }));
+            }
+        }
+    } catch (error) {
+        logger.error('encountered error in training model: %o', error);
+    }
+        _done();
+    }
+    
 
 }
 

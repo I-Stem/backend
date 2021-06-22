@@ -7,14 +7,16 @@ class WebinarsModel {
     resourceDescription: string = '';
     resourceUrl: string = '';
 
-    persistWebinars(currUserId: string) {
-        const logger = loggerFactory(WebinarsModel.ServiceName, 'persistWebinars');
-        new WebinarsDbModel(this)
-    .save((err: any) => {
-        if (err) {
-        logger.error(err);
-        }
-    });
+    constructor(url, name, description) {
+        this.resourceUrl = url;
+        this.resourceTitle = name;
+        this.resourceDescription = description;
+    }
+
+    async persistWebinars() {
+                const logger = loggerFactory(WebinarsModel.ServiceName, 'persistWebinars');
+        await new WebinarsDbModel(this)
+    .save();
     }
 }
 

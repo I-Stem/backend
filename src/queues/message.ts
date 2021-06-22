@@ -12,7 +12,7 @@ import Message from '../models/Message';
 import EmailService from '../services/EmailService';
 import {MessageModel} from '../domain/MessageModel';
 
-class MessageQueue {
+export class MessageQueue {
     public queue: any;
     static servicename = 'MessageQueue';
 
@@ -62,24 +62,25 @@ class MessageQueue {
     }
 
     private process(): void {
-        const logger = loggerFactory(MessageQueue.servicename, 'process');
-        this.queue.process((_job: any, _done: any) => {
-            logger.debug( _job.data);
+        this.queue.process(this.deliverMessage);
+    }
 
-            if (_job.data?.isInternal) {
+    public             deliverMessage(_job: any, _done: any)  {
+        const logger = loggerFactory(MessageQueue.servicename, 'process');
+        logger.debug( _job.data);
+
+        if (_job.data?.isInternal) {
 EmailService.sendEmailMessage(_job.data as MessageModel);
 return _done();
-            } else if (_job.data?.isInternal === false) {
-                const message = new MessageModel(_job.data);
-                message.persist();
-                EmailService.sendEmailMessage(message);
-                return _done();
-            }
-
-                
-        });
-
+        } else if (_job.data?.isInternal === false) {
+            const message = new MessageModel(_job.data);
+            message.persist();
+            EmailService.sendEmailMessage(message);
+            return _done();
+        }
     }
+
+
 }
 
 export default new MessageQueue();

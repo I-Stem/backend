@@ -51,33 +51,36 @@ class VerifyQueue {
         this.queue.add({ cronJob: 'cronJob' }, options);
     }
     private process(): void {
-        const methodname = 'process';
-        const logger = loggerFactory.call(this, VerifyQueue.servicename, methodname);
-        this.queue.process((_job: any, _done: any) => {
-            User.find({ isVerified : false, verifyUserExpires: { $lt: new Date() } }, (err: Error, data: Array<IUserModel>) => {
-                if (err) {
-                    logger.error(err.message);
-                } else {
-                    ArchivedUser.insertMany(data, {}, (err: Error) => {
-                        if (err) {
-                            logger.error(err.message);
-                        } else {
-                            logger.info('Archived user populated');
-                        }
-                    });
-                    const userIds = data.map(value => value._id);
-                    User.deleteMany({_id: {$in: userIds }}, {}, (err: Error) => {
-                        if (err) {
-                            logger.error(err.message);
-                        } else {
-                            logger.info('User database cleared of unverifed users');
-                        }
-                    });
-                }
-                _done();
-            });
+        this.queue.process(this.deleteOldUnverifiedUsers);
+    }
+
+    public deleteOldUnverifiedUsers            (_job: any, _done: any) {
+        const logger = loggerFactory.call(this, VerifyQueue.servicename, "deleteOldUnverifiedUsers" );
+
+        User.find({ isVerified : false, verifyUserExpires: { $lt: new Date() } }, (err: Error, data: Array<IUserModel>) => {
+            if (err) {
+                logger.error(err.message);
+            } else {
+                ArchivedUser.insertMany(data, {}, (err: Error) => {
+                    if (err) {
+                        logger.error(err.message);
+                    } else {
+                        logger.info('Archived user populated');
+                    }
+                });
+                const userIds = data.map(value => value._id);
+                User.deleteMany({_id: {$in: userIds }}, {}, (err: Error) => {
+                    if (err) {
+                        logger.error(err.message);
+                    } else {
+                        logger.info('User database cleared of unverifed users');
+                    }
+                });
+            }
+            _done();
         });
     }
+
 }
 
 export default new VerifyQueue();

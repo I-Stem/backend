@@ -43,6 +43,40 @@ describe("Must call formatting API successfully", async function() {
         nock(process.env.SERVICE_API_HOST)
         .post(`/api/v1/ocr/format`)
         .reply(200, {
+            code: 200,
+            hash: "amazing"
+        });
+
+        //setting up mocks
+        const fileServiceGetFileStub = Sinon.stub(FileService, "getFileDataByS3Key").callsFake(async (conaainer, fileKey) => {
+            return {
+                Body: Buffer.from(`{"message": "Hello world"}`)
+            }
+        });
+afcProcess.ocrJSONFile = new FileCoordinate("container", "fileKey");
+        await afcProcess.persist();
+
+        await afcResponseQueue.makeFormattingRequest({
+            data: {
+            afcProcess: afcProcess,
+                outputFormats: [afcRequest.outputFormat],
+                requestingUsers: [fileOwner]
+            }
+        }, () => {
+            console.log("formatting of file  request processing complete");
+        });
+   
+        fileServiceGetFileStub.restore();
+    });
+
+    it("must handle expected failure  from formatting API server", async function() {
+
+        //mock http endpoint
+
+        nock(process.env.SERVICE_API_HOST)
+        .post(`/api/v1/ocr/format`)
+        .reply(200, {
+            code: 500,
             hash: "amazing"
         });
 
@@ -66,6 +100,7 @@ afcProcess.ocrJSONFile = new FileCoordinate("container", "fileKey");
    
         fileServiceGetFileStub.restore();
     });
+
 
 it("must handle Formatting API failure", async function() {
 //mock http endpoint

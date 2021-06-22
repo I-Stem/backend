@@ -5,14 +5,14 @@ class IndustryModel {
     static ServiceName = 'IndustryModel';
     name: string = '';
 
-    persistIndustry(currUserId: string) {
+    constructor(name:string) {
+        this.name = name;
+    }
+
+    async persistIndustry() {
         const logger = loggerFactory(IndustryModel.ServiceName, 'persistIndustry');
-        new IndustryDbModel(this)
-    .save((err: any) => {
-        if (err) {
-        logger.error(err);
-        }
-    });
+        await new IndustryDbModel(this)
+    .save();
     }
 }
 

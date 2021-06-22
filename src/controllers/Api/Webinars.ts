@@ -35,7 +35,7 @@ class WebinarsController {
         const logger = loggerFactory(WebinarsController.ServiceName, 'addWebinars');
         logger.info('Request Received: %o', req.body);
         const WebinarsInstance = plainToClass(WebinarsModel, req.body);
-        WebinarsInstance.persistWebinars(res.locals.user.id);
+        WebinarsInstance.persistWebinars();
         return res.status(HttpStatus.OK).json(
             response[HttpStatus.OK]({
                 message: `Webinar successfully stored`,

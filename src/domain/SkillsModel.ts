@@ -5,14 +5,14 @@ class SkillsModel {
     static ServiceName = 'SkillsModel';
     name: string = '';
 
-    persistSkills(currUserId: string) {
+    constructor(name:string) {
+        this.name = name;
+    }
+
+    async persistSkills() {
         const logger = loggerFactory(SkillsModel.ServiceName, 'persistSkills');
-        new SkillsDbModel(this)
-    .save((err: any) => {
-        if (err) {
-        logger.error(err);
-        }
-    });
+        await new SkillsDbModel(this)
+    .save();
     }
 }
 

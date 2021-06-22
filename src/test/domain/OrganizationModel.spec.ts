@@ -3,12 +3,15 @@ import db from "../dbHandler";
 import {OrganizationModel} from "../../domain/organization";
 import UserModel from "../../domain/user/User";
 import { OAuthProvider, ServiceRoleEnum, UserType } from "../../domain/user/UserConstants";
-import { DomainAccess, UniversityAccountStatus } from "../../domain/organization/OrganizationConstants";
+import { DomainAccess, UniversityAccountStatus, UniversityRoles } from "../../domain/organization/OrganizationConstants";
 import {OrganizationModelStubs} from "../mocks/domain/OrganizationModelStubs";
 import {UserModelStubs} from "../mocks/domain/UserModelStubs";
 
 describe("Unit tests for organization flow", () => {
-    const john = UserModelStubs.JohnSnow;
+    const john = new UserModel({
+        role: UniversityRoles.STAFF,
+        ...UserModelStubs.JohnSnow
+    });
     const arya = UserModelStubs.AryaStark;
     const winterfell = OrganizationModelStubs.winterfellUniversity;
 

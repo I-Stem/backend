@@ -62,24 +62,29 @@ import { VCProcess } from "../domain/VCProcess";
         this.queue.add({ cronJob: "cronJob" }, options);
     }
     private process(): void {
+        this.queue.process(this.huntImpendingFailures);
+    }
+
+    public             async huntImpendingFailures(_job: any, _done: any) {
         const methodname = "process";
         const logger = loggerFactory.call(
             this,
             ProcessQueue.servicename,
             methodname
         );
-        this.queue.process((_job: any, _done: any) => {
-            logger.info(`Process QUEUE`);
-            const date = new Date();
-            const hourAgo = new Date(
-                date.getTime() - 1000 * 60 * 60
-            ).toISOString();
-            const now = date.toISOString();
-            AFCProcess.afcCronHandler(hourAgo, now);
-            VCProcess.vcCronHandler(hourAgo, now);
-            _done();
-        });
+
+        logger.info(`Process QUEUE`);
+        const date = new Date();
+        const hourAgo = new Date(
+            date.getTime() - 1000 * 60 * 60
+        ).toISOString();
+        const now = date.toISOString();
+        AFCProcess.afcCronHandler(hourAgo, now);
+        VCProcess.vcCronHandler(hourAgo, now);
+        _done();
     }
+    
+
 }
 
 export default new ProcessQueue();

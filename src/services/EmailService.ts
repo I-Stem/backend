@@ -18,10 +18,10 @@ const sendEmail = mailer.config({
     }),
 });
 
-class EmailService {
+export class EmailService {
     static ServiceName = "EmailService";
 
-    private sendEmailPromise = function (message: any) {
+    private sendEmailPromise (message: any) {
         const methodname = "sendEmailPromise";
         const logger = loggerFactory(EmailService.ServiceName, methodname);
         return new Promise((resolve, reject) => {
@@ -150,6 +150,7 @@ class EmailService {
         EmailQueue.dispatch(message);
     }
 
+    /*
     public sendMail(mesg: any) {
         const methodname = "sendmail";
         const logger = loggerFactory(EmailService.ServiceName, methodname);
@@ -172,6 +173,7 @@ class EmailService {
                 logger.error(err);
             });
     }
+*/
 
     public sendEmailMessage(message: MessageModel): void {
         const logger = loggerFactory(
