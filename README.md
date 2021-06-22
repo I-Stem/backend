@@ -41,7 +41,7 @@
 * Persists and does database operations on all the user data in mongo database.
 * Defines the workflow followed by different AI-powered and manual processes for different accessibility remediation solutions.
 * Contains most of business logic and domain models for the system.
-* Delegates the actual AI-powered remidiation of inaccessible content  to accommodation-automation repo.
+* Delegates the actual AI-powered remidiation of inaccessible content  to science repo.
 
 # Global Requisites
 
