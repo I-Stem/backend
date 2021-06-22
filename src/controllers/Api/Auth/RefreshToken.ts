@@ -43,7 +43,7 @@ class RefreshTokenController {
             );
         }
 
-        const decode = jwt.decode(_token, res.locals.app.appSecret);
+        const decode:any = jwt.decode(_token, res.locals.app.appSecret);
 
         User.findOne({ email: decode?.email.toLowerCase() }, (err, user) => {
             if (err) {

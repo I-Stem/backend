@@ -82,7 +82,7 @@
     "@types/express-status-monitor": "^1.2.1",
     "@types/faker": "^4.1.12",
     "@types/hapi__joi": "^17.1.2",
-    "@types/jsonwebtoken": "^8.5.0",
+    "@types/jsonwebtoken": "^8.5.2",
     "@types/lusca": "^1.6.2",
     "@types/mocha": "^5.2.5",
     "@types/mock-req-res": "^1.1.2",

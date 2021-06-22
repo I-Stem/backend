@@ -13,7 +13,7 @@ import {UserType, UserRoleEnum} from "../user/UserConstants";
 import {UniversityRoles} from "../organization/OrganizationConstants";
 import {FileProcessAssociations} from "./FileConstants";
 import {Stream, Readable} from "stream";
-import * as pdfJS from "pdfjs-dist/es5/build/pdf";
+import {getDocument} from "pdfjs-dist";
 import { getVideoDurationInSeconds } from "get-video-duration";
 
 export class UserContext {
@@ -330,7 +330,7 @@ fileDataChunks.push(dataChunk);
             const fileData = Buffer.concat(fileDataChunks);
 
             if(mimetype === "application/pdf") {
- pdfJS.getDocument({data: fileData}).promise.then(async (doc) => {
+ getDocument({data: fileData}).promise.then(async (doc) => {
 logger.info(`Number of pages in pdf: ${doc.numPages}`);
 await FileDbModel.findByIdAndUpdate(this.fileId, {
     pages: doc.numPages,

@@ -14,7 +14,7 @@ import FileModel from "../domain/FileModel";
 import ExceptionMessageTemplates from "../MessageTemplates/ExceptionTemplates";
 import emailService from "../services/EmailService";
 import { getFormattedJson } from "../utils/formatter";
-import * as pdfJS from "pdfjs-dist/es5/build/pdf";
+//import * as pdfJS from "pdfjs-dist/es5/build/pdf";
 import AFCDbModel from "../models/AFC";
 import UserModel from "../domain/user/User";
 import {AFCProcess} from "../domain/AFCProcess";
