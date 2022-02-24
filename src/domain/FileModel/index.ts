@@ -224,7 +224,7 @@ await FileDbModel.findByIdAndUpdate(this.fileId, {
     }
 
     public static async findFileById(id: string): Promise<FileModel | null> {
-        return FileDbModel.findOne({ _id: id }).lean();
+        return new FileModel(await FileDbModel.findOne({ _id: id }).lean());
     }
 
 
