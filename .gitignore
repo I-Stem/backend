@@ -1,6 +1,5 @@
 
 .vscode
-package-lock.json
 .cache/
 public/static
 *.marko.js

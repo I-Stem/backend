@@ -52,7 +52,7 @@
     "nodemailer-promise": "^2.0.0",
     "passport": "^0.4.1",
     "passport-google-oauth20": "^2.0.0",
-    "pdfjs-dist": "^2.5.207",
+    "pdfjs-dist": "^2.8.335",
     "pkgcloud": "^2.2.0",
     "reflect-metadata": "^0.1.13",
     "request": "^2.88.0",
