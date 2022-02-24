@@ -233,11 +233,15 @@ message = "Audio/Video accessibility of file: " + this.documentName;
         vcRequestId: string,
         review: ReviewModel
     ): Promise<VcModel | null> {
-        return new VcModel(await VcDbModel.findOneAndUpdate(
+        const vc =             await VcDbModel.findOneAndUpdate(
             { _id: vcRequestId },
             { $push: { reviews: review }, review: review },
             { new: true }
-        ).lean());
+        ).lean();
+if(vc != null) 
+        return new VcModel(vc);
+        else
+        null;
     }
 
     public static async getVCRequestById(vcRequestId: string) {
